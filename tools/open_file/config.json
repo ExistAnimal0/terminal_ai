@@ -1,0 +1,14 @@
+{
+  "name": "open_file",
+  "description": "Open a file in its default application (image viewer, editor, etc.).",
+  "parameters": {
+    "type": "object",
+    "required": ["path"],
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Path to the file to open."
+      }
+    }
+  }
+}

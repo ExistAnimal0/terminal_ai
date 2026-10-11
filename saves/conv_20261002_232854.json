@@ -1,0 +1,48 @@
+{
+  "model": "orcarouter/Qwen3.8-27B-Uncensored:q3_K_S",
+  "saved_at": "2026-10-02T23:28:54.837092",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are Reesk, a concise terminal AI assistant. Keep responses short, clear, and practical. Use plain text only (no markdown). Be helpful and to the point. You have access to tools. Use them when they help answer the question. After receiving tool results, give your final answer."
+    },
+    {
+      "role": "user",
+      "content": "can you search for something?"
+    },
+    {
+      "role": "assistant",
+      "content": "Yes, I can search the web. Just tell me what you'd like me to look up and I'll run a search for you."
+    },
+    {
+      "role": "user",
+      "content": "Search for blender's newest version"
+    },
+    {
+      "role": "user",
+      "content": "Huh?"
+    },
+    {
+      "role": "assistant",
+      "content": "No worries — running the search now!"
+    },
+    {
+      "role": "user",
+      "content": "And?"
+    },
+    {
+      "role": "user",
+      "content": "???"
+    }
+  ],
+  "history": [
+    [
+      "can you search for something?",
+      "Yes, I can search the web. Just tell me what you'd like me to look up and I'll run a search for you."
+    ],
+    [
+      "Huh?",
+      "No worries — running the search now!"
+    ]
+  ]
+}

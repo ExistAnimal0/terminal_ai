@@ -1,0 +1,26 @@
+{
+  "name": "spotify",
+  "description": "Control Spotify playback: status, play, pause, next, previous, volume, search, play_id.",
+  "parameters": {
+    "type": "object",
+    "required": ["action"],
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "One of: status, play, pause, next, previous, volume, search, play_id"
+      },
+      "query": {
+        "type": "string",
+        "description": "Search query (used with action=search)"
+      },
+      "percent": {
+        "type": "integer",
+        "description": "Volume 0-100 (used with action=volume)"
+      },
+      "id": {
+        "type": "string",
+        "description": "Track ID to play (used with action=play_id)"
+      }
+    }
+  }
+}
