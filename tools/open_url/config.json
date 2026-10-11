@@ -1,0 +1,14 @@
+{
+  "name": "open_url",
+  "description": "Open a URL in the user's default browser. Adds https:// if no scheme is given.",
+  "parameters": {
+    "type": "object",
+    "required": ["url"],
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "The URL to open (e.g. 'example.com' or 'https://example.com')."
+      }
+    }
+  }
+}

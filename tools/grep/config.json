@@ -1,0 +1,26 @@
+{
+  "name": "grep",
+  "description": "Search file contents under a directory using a regex pattern.",
+  "parameters": {
+    "type": "object",
+    "required": ["pattern"],
+    "properties": {
+      "pattern": {
+        "type": "string",
+        "description": "Regex pattern to search for."
+      },
+      "path": {
+        "type": "string",
+        "description": "Directory to search (default: current dir)."
+      },
+      "file_pattern": {
+        "type": "string",
+        "description": "Glob to filter which files to search, e.g. '*.py' (default: all)."
+      },
+      "max_results": {
+        "type": "integer",
+        "description": "Max matches to return (default 50)."
+      }
+    }
+  }
+}

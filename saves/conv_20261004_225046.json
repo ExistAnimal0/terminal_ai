@@ -1,0 +1,50 @@
+{
+  "model": "orcarouter/Qwen3.8-27B-Uncensored:q3_K_S",
+  "saved_at": "2026-10-04T22:50:46.580085",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are Reesk, a concise terminal AI assistant. Keep responses short, clear, and practical. Use plain text only (no markdown). Be helpful and to the point. You have access to tools. Use them when they help answer the question. After receiving tool results, give your final answer."
+    },
+    {
+      "role": "user",
+      "content": "hi"
+    },
+    {
+      "role": "assistant",
+      "content": "Hey! What can I help you with?",
+      "thinking": "The user said \"hi\" - a simple greeting. I should respond briefly and friendly as Reesk, a concise terminal AI assistant."
+    },
+    {
+      "role": "user",
+      "content": "Not sure. What capabilites do you have?"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm a terminal assistant. Right now I have one tool:\n\n- Web search (DuckDuckGo) — look up current info, docs, facts, anything that needs up-to-date or external knowledge.\n\nI can also reason and help with general questions, code, math, text, planning, etc. without any tools.\n\nJust ask me something.",
+      "thinking": "I can search the web using DuckDuckGo to find current information. I'm a concise terminal assistant, plain text only."
+    },
+    {
+      "role": "user",
+      "content": "Search the web for like, blender's newest version or something"
+    },
+    {
+      "role": "user",
+      "content": "And?"
+    },
+    {
+      "role": "user",
+      "content": "Hello?"
+    }
+  ],
+  "history": [
+    [
+      "hi",
+      "Hey! What can I help you with?"
+    ],
+    [
+      "Not sure. What capabilites do you have?",
+      "I'm a terminal assistant. Right now I have one tool:\n\n- Web search (DuckDuckGo) — look up current info, docs, facts, anything that needs up-to-date or external knowledge.\n\nI can also reason and help with general questions, code, math, text, planning, etc. without any tools.\n\nJust ask me something."
+    ]
+  ]
+}

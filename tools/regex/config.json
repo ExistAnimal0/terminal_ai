@@ -1,0 +1,26 @@
+{
+  "name": "regex",
+  "description": "Match or replace text using a regular expression.",
+  "parameters": {
+    "type": "object",
+    "required": ["pattern", "text"],
+    "properties": {
+      "pattern": {
+        "type": "string",
+        "description": "Regular expression pattern."
+      },
+      "text": {
+        "type": "string",
+        "description": "Text to search or transform."
+      },
+      "mode": {
+        "type": "string",
+        "description": "'match' (find all) or 'replace' (substitute). Default: match."
+      },
+      "replacement": {
+        "type": "string",
+        "description": "Replacement string (used when mode is 'replace')."
+      }
+    }
+  }
+}

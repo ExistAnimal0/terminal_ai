@@ -1,0 +1,30 @@
+{
+  "name": "csv_parse",
+  "description": "Read, filter, or summarize a CSV file.",
+  "parameters": {
+    "type": "object",
+    "required": ["path"],
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Path to the CSV file."
+      },
+      "action": {
+        "type": "string",
+        "description": "'read' (show rows), 'filter' (rows matching a column value), or 'summarize' (column stats). Default: read."
+      },
+      "filter_col": {
+        "type": "string",
+        "description": "Column name to filter on (used with action='filter')."
+      },
+      "filter_val": {
+        "type": "string",
+        "description": "Value to match (used with action='filter')."
+      },
+      "max_rows": {
+        "type": "integer",
+        "description": "Max rows to return (default 50)."
+      }
+    }
+  }
+}

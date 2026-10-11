@@ -1,0 +1,26 @@
+{
+  "name": "git_ops",
+  "description": "Run git commands: status, log, diff, or commit.",
+  "parameters": {
+    "type": "object",
+    "required": ["action"],
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "'status', 'log', 'diff', or 'commit'."
+      },
+      "path": {
+        "type": "string",
+        "description": "Path to the git repo (default: current dir)."
+      },
+      "message": {
+        "type": "string",
+        "description": "Commit message (used with action='commit')."
+      },
+      "ref": {
+        "type": "string",
+        "description": "Ref to compare against (used with action='log' or 'diff')."
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "clipboard",
+  "description": "Read or write the system clipboard.",
+  "parameters": {
+    "type": "object",
+    "required": ["action"],
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "'get' or 'set'."
+      },
+      "text": {
+        "type": "string",
+        "description": "Text to put on clipboard (used with action='set')."
+      }
+    }
+  }
+}

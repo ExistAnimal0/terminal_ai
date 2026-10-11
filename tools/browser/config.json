@@ -1,0 +1,46 @@
+{
+  "name": "browser",
+  "description": "Drive a headless Chromium browser via Playwright. Render JS-heavy pages, take screenshots, and interact with elements. State persists across calls in a session.",
+  "parameters": {
+    "type": "object",
+    "required": ["action"],
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "One of: goto, text, html, title, screenshot, click, type, wait, eval, close."
+      },
+      "url": {
+        "type": "string",
+        "description": "URL to navigate to (used with goto, text, html, title, screenshot)."
+      },
+      "selector": {
+        "type": "string",
+        "description": "CSS selector for an element (used with click, type, wait)."
+      },
+      "text": {
+        "type": "string",
+        "description": "Text to type into an element (used with type)."
+      },
+      "expression": {
+        "type": "string",
+        "description": "JavaScript expression to run on the page (used with eval)."
+      },
+      "output": {
+        "type": "string",
+        "description": "File path for the screenshot (used with screenshot, default screenshot.png)."
+      },
+      "wait_ms": {
+        "type": "integer",
+        "description": "Milliseconds to wait after navigation for JS to settle (default 1500)."
+      },
+      "timeout": {
+        "type": "integer",
+        "description": "Timeout in ms for click/type/wait (default 10000)."
+      },
+      "max_chars": {
+        "type": "integer",
+        "description": "Max characters to return for text/html/eval (default 8000)."
+      }
+    }
+  }
+}
