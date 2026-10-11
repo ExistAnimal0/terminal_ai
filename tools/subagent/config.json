@@ -1,0 +1,42 @@
+{
+  "name": "subagent",
+  "description": "Spawn and manage sub-agents that run on the same model and context window as you, with the same tools. Sub-agents can communicate with each other and with you via a shared message bus. Actions: spawn (create one, needs task), run (run ONE for N tool-rounds, needs agent_id+rounds), run_all (run MANY in PARALLEL via threads, needs agent_ids+rounds), send (post a message to the bus, needs agent_id+message, optional to), read (read bus messages for an agent, needs agent_id), status (peek at an agent's state, needs agent_id), list (list active sub-agents), kill (remove one, needs agent_id), clear (clear the bus).",
+  "parameters": {
+    "type": "object",
+    "required": ["action"],
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "One of: spawn, run, run_all, send, read, status, list, kill, clear."
+      },
+      "task": {
+        "type": "string",
+        "description": "The task to give a new sub-agent (used with action=spawn)."
+      },
+      "name": {
+        "type": "string",
+        "description": "Optional friendly name for a new sub-agent (used with action=spawn)."
+      },
+      "agent_id": {
+        "type": "string",
+        "description": "A single sub-agent id (used with run/send/read/status/kill). For send/read, omit to act as 'main'."
+      },
+      "agent_ids": {
+        "type": "string",
+        "description": "Comma-separated list of sub-agent ids to run in PARALLEL (used with action=run_all), e.g. 'agent_1_x,agent_2_y'."
+      },
+      "rounds": {
+        "type": "integer",
+        "description": "Max tool-rounds to run a sub-agent (used with run/run_all, default 10)."
+      },
+      "message": {
+        "type": "string",
+        "description": "Message text to post to the bus (used with action=send)."
+      },
+      "to": {
+        "type": "string",
+        "description": "Recipient on the bus: 'all' to broadcast, or a specific agent_id (used with action=send, default 'all')."
+      }
+    }
+  }
+}
