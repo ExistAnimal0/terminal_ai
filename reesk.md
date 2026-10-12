@@ -142,3 +142,9 @@ Standalone folders (config.json + tool.py):
 - Context usage is estimated with a chars/4 heuristic over content, thinking,
   and tool-call args; Ollama's prompt_eval_count is used when available.
 - /load replays a saved conversation in the same visual style as a live chat.
+- Memory: use it often. Proactively store any fact, name, email, preference, or
+  detail you learn that you may need later - do not wait to be asked.
+- Memory: store specific keys, not blobs. One fact per key, with a specific
+  descriptive key name (e.g. 'verna_email', 'verna_maker', 'verna_model').
+  Never cram several unrelated facts into one key - a blob only matches as a
+  whole, so a specific detail buried in it will not be found by semantic search.

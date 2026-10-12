@@ -1,6 +1,6 @@
 {
   "name": "memory",
-  "description": "Persistent key-value memory with semantic search (nomic-embed-text via Ollama). Store, retrieve, list, search, or delete notes that survive across sessions. Falls back to substring search if Ollama is unavailable.",
+  "description": "Persistent key-value memory with semantic search (nomic-embed-text via Ollama). Store, retrieve, list, search, or delete notes that survive across sessions. USE IT OFTEN: proactively store any fact, name, email, preference, or detail you learn that you may need later - do not wait to be asked. STORE SPECIFIC KEYS, NOT BLOBS: one fact per key, with a specific descriptive key name (e.g. 'verna_email', 'verna_maker', 'verna_model'), never several unrelated facts crammed into one key - a blob only matches as a whole, so a specific detail buried in it will not be found by semantic search. Query it in the same manner. Falls back to substring search if Ollama is unavailable.",
   "parameters": {
     "type": "object",
     "required": ["action"],
