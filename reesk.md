@@ -26,6 +26,7 @@ terminal_ai/
   assistant.bat          Windows launcher (cd to script dir, run python)
   settings.json         persistent settings (working_directory)
   spotify.json          Spotify OAuth tokens (client_id, access/refresh)
+  memory.json           persistent memory store (key -> {value, embedding})
   inbox/               drop folder for files to process
   saves/               saved conversations (created on first /save)
   tools/               tool definitions (see Tool conventions below)
@@ -127,6 +128,9 @@ Standalone folders (config.json + tool.py):
                     previous, volume, search, play_id)
   subagent/         spawn and manage sub-agents (spawn, run, run_all, send,
                     read, status, list, kill, clear) with a shared message bus
+  memory/           persistent key-value memory with semantic search
+                    (nomic-embed-text via Ollama, cosine similarity,
+                    threshold 0.55; falls back to substring if Ollama is down)
 
 ### Conventions
 

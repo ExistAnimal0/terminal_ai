@@ -1,0 +1,26 @@
+{
+  "name": "memory",
+  "description": "Persistent key-value memory with semantic search (nomic-embed-text via Ollama). Store, retrieve, list, search, or delete notes that survive across sessions. Falls back to substring search if Ollama is unavailable.",
+  "parameters": {
+    "type": "object",
+    "required": ["action"],
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "'store', 'get', 'list', 'search', or 'delete'."
+      },
+      "key": {
+        "type": "string",
+        "description": "Memory key (used with store, get, delete)."
+      },
+      "value": {
+        "type": "string",
+        "description": "Value to store (used with action='store')."
+      },
+      "query": {
+        "type": "string",
+        "description": "Search term for semantic matching (used with action='search')."
+      }
+    }
+  }
+}

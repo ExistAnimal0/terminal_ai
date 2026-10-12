@@ -1,1 +1,4 @@
 saves/
+__pycache__/
+*.pyc
+memory.json
