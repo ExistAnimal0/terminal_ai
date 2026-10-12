@@ -95,6 +95,11 @@ def save_token_log(log):
     except Exception:
         pass
 
+
+def filter_tokens_by_date(date_str):
+    """Return token-log entries whose timestamp date matches date_str (YYYY-MM-DD)."""
+    return [e for e in TOKEN_LOG if e.get("timestamp", "")[:10] == date_str]
+
 def log_turn_tokens(content_tokens, thinking_tokens, total_tokens):
     """Append one turn's token counts to the log and save it."""
     global TOKEN_LOG
@@ -560,7 +565,8 @@ COMMANDS = {
     "/saves": "List saved conversations.",
     "/theme": "Toggle color theme (on/off).",
     "/ctx": "Show context usage.",
-    "/tokens": "Show logged token usage (per turn + session totals).",
+    "/tokens": "Show token usage for a date (default today). Optional: /tokens YYYY-MM-DD.",
+    "/ttl": "Show only content/thinking/total for a date (default today). Optional: /ttl YYYY-MM-DD.",
     "/compact": "Summarize all thinking blocks except the last one, then reprint the conversation.",
     "/rst": "Reset the conversation.",
     "/frst": "Reset the conversation and reload all tools.",
@@ -841,19 +847,49 @@ def handle_command(cmd, history, messages):
         print(c(f"  Color theme {'ON' if USE_COLOR else 'OFF'}.", C.GREEN))
         return True, messages
     elif cmd_name == "/tokens":
-        if not TOKEN_LOG:
-            print(c("  No token data logged yet.", C.DIM))
+        if cmd_arg:
+            target_date = cmd_arg
+            try:
+                datetime.strptime(target_date, "%Y-%m-%d")
+            except ValueError:
+                print(c(f"  Invalid date '{cmd_arg}'. Use YYYY-MM-DD (e.g. 2026-10-12).", C.RED))
+                return True, messages
+        else:
+            target_date = datetime.now().strftime("%Y-%m-%d")
+        entries = filter_tokens_by_date(target_date)
+        if not entries:
+            print(c(f"  No token data logged for {target_date}.", C.DIM))
             return True, messages
+        label = "today" if target_date == datetime.now().strftime("%Y-%m-%d") else target_date
         print(c("\n-- Token Log ---------------------------", C.BOLD))
-        print(c(f"  File: {TOKEN_LOG_FILE}", C.DIM))
-        print(c(f"  Turns logged: {len(TOKEN_LOG)}", C.CYAN))
-        for e in TOKEN_LOG[-10:]:
-            print(f"  {e.get('timestamp','?')}  tokens={e.get('tokens',0)}  thinking={e.get('thinking_tokens',0)}  total={e.get('total',0)}")
-        sum_t = sum(e.get("tokens", 0) for e in TOKEN_LOG)
-        sum_th = sum(e.get("thinking_tokens", 0) for e in TOKEN_LOG)
-        sum_tot = sum(e.get("total", 0) for e in TOKEN_LOG)
+        print(c(f"  Date: {target_date} ({label})", C.DIM))
+        print(c(f"  Turns logged: {len(entries)}", C.CYAN))
+        for e in entries[-10:]:
+            print(f"  {e.get('timestamp','?')}  content={e.get('tokens',0)}  thinking={e.get('thinking_tokens',0)}  total={e.get('total',0)}")
+        sum_t = sum(e.get("tokens", 0) for e in entries)
+        sum_th = sum(e.get("thinking_tokens", 0) for e in entries)
+        sum_tot = sum(e.get("total", 0) for e in entries)
         print(c("  ----------------------------------------", C.BOLD))
-        print(c(f"  Session totals: tokens={sum_t}  thinking={sum_th}  total={sum_tot}", C.CYAN))
+        print(c(f"  Totals for {label}: content={sum_t}  thinking={sum_th}  total={sum_tot}", C.CYAN))
+        return True, messages
+    elif cmd_name == "/ttl":
+        if cmd_arg:
+            target_date = cmd_arg
+            try:
+                datetime.strptime(target_date, "%Y-%m-%d")
+            except ValueError:
+                print(c(f"  Invalid date '{cmd_arg}'. Use YYYY-MM-DD (e.g. 2026-10-12).", C.RED))
+                return True, messages
+        else:
+            target_date = datetime.now().strftime("%Y-%m-%d")
+        entries = filter_tokens_by_date(target_date)
+        if not entries:
+            print(c(f"  No token data for {target_date}.", C.DIM))
+            return True, messages
+        sum_t = sum(e.get("tokens", 0) for e in entries)
+        sum_th = sum(e.get("thinking_tokens", 0) for e in entries)
+        sum_tot = sum(e.get("total", 0) for e in entries)
+        print(c(f"  content={sum_t}  thinking={sum_th}  total={sum_tot}", C.CYAN))
         return True, messages
     else:
         print(c(f"  Unknown command: {cmd}. Type / for a list.", C.RED))
