@@ -145,6 +145,9 @@ search via nomic-embed-text through Ollama. Two conventions:
   key name (e.g. `verna_email`, `verna_maker`, `verna_model`). Never cram several
   unrelated facts into one key - a blob only matches as a whole, so a specific
   detail buried in it will not be found by semantic search.
+- Query it when unsure. If you are confused about something the user said, or
+  a name, email, preference, or fact you may have stored before, search memory
+  for it before asking the user to repeat it.
 
 ## Included Tools
 
