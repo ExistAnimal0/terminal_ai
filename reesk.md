@@ -121,7 +121,6 @@ Standalone folders (config.json + tool.py):
   image_downloader/ download an image from a URL
   image_search/     image search via DuckDuckGo
   open_file/        open a file in its default app
-  open_quadrant/    open a URL in a browser quadrant (optionally a new window)
   open_url/         open a URL in the default browser
   regex/            match or replace text with a regex
   spotify/          control Spotify playback (status, play, pause, next,

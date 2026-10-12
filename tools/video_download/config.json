@@ -1,0 +1,38 @@
+{
+  "name": "video_download",
+  "description": "Download a video (or audio) from a URL using yt-dlp. Supports YouTube, Vimeo, Dailymotion, and most other sites yt-dlp handles.",
+  "parameters": {
+    "type": "object",
+    "required": ["url"],
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "Video URL to download."
+      },
+      "output": {
+        "type": "string",
+        "description": "Output directory (default: ./downloads) or a full file path to save to."
+      },
+      "format": {
+        "type": "string",
+        "description": "yt-dlp format selector. Default: bestvideo+bestaudio/best. e.g. '133', 'best[height<=720]'. Ignored when audio=true."
+      },
+      "audio": {
+        "type": "boolean",
+        "description": "If true, download audio only as mp3 (192kbps). Default false."
+      },
+      "list": {
+        "type": "boolean",
+        "description": "If true, list available formats and exit without downloading."
+      },
+      "title": {
+        "type": "string",
+        "description": "Custom output filename (without extension). Overrides the video's own title."
+      },
+      "no_playlist": {
+        "type": "boolean",
+        "description": "If true, download only the single video, not the whole playlist. Default false."
+      }
+    }
+  }
+}
