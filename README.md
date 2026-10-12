@@ -176,7 +176,6 @@ Standalone folders (config.json + tool.py):
 | image_downloader | tools/image_downloader/ | Download an image from a URL |
 | image_search | tools/image_search/ | Image search via DuckDuckGo |
 | open_file | tools/open_file/ | Open a file in its default app |
-| open_quadrant | tools/open_quadrant/ | Open a URL in a browser quadrant (optionally a new window) |
 | open_url | tools/open_url/ | Open a URL in the default browser |
 | regex | tools/regex/ | Match or replace text with a regex |
 | spotify | tools/spotify/ | Control Spotify playback (status, play, pause, next, previous, volume, search, play_id) |
