@@ -134,6 +134,18 @@ Drop a new folder into tools/ with a tool.py and a config.json (single tool),
 or add an entry to a genre package's TOOLS dict. No changes to terminal_ai.py
 are needed - it is auto-discovered on the next start.
 
+### Memory
+
+The memory tool is a persistent key-value store (memory.json) with semantic
+search via nomic-embed-text through Ollama. Two conventions:
+
+- Use it often. Proactively store any fact, name, email, preference, or detail
+  you learn that you may need later - do not wait to be asked.
+- Store specific keys, not blobs. One fact per key, with a specific descriptive
+  key name (e.g. `verna_email`, `verna_maker`, `verna_model`). Never cram several
+  unrelated facts into one key - a blob only matches as a whole, so a specific
+  detail buried in it will not be found by semantic search.
+
 ## Included Tools
 
 Genre packages (via tools.py aggregation):
@@ -166,6 +178,7 @@ Standalone folders (config.json + tool.py):
 | regex | tools/regex/ | Match or replace text with a regex |
 | spotify | tools/spotify/ | Control Spotify playback (status, play, pause, next, previous, volume, search, play_id) |
 | subagent | tools/subagent/ | Spawn and manage sub-agents (spawn, run, run_all, send, read, status, list, kill, clear) with a shared message bus |
+| memory | tools/memory/ | Persistent key-value memory with semantic search (nomic-embed-text via Ollama, cosine similarity, threshold 0.55; falls back to substring if Ollama is down) |
 
 ## Output
 
