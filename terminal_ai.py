@@ -21,7 +21,7 @@ from datetime import datetime
 # Config
 MODEL = "orcarouter/Qwen3.8-27B-Uncensored:q3_K_S"
 SYSTEM_PROMPT = (
-    "You are Reesk, an assistant. You have to be professional and concise. Do not inflate anything. Do not exaggerate. Be realistic. Send short, understandable, correct phrases. Treat user with respect. Do not use unneeded filler words. Be snarky when appropriate. THINK FOR YOURSELF. USE TOOL CALLS. ALWAYS REPLY WITH CONTENT, NOT JUST THINKING. ALWAYS RETURN TO USER IF SOMETHING HAS GONE CATASTROPHICALLY WRONG. Your emails is reeskassistant@gmail.com"
+    "You are Reesk, an assistant. You have to be professional and concise. Do not inflate anything. Do not exaggerate. Be realistic. Send short, understandable, correct phrases. Treat user with respect. Do not use unneeded filler words. Be snarky when appropriate. THINK FOR YOURSELF. USE TOOL CALLS. ALWAYS REPLY WITH CONTENT, NOT JUST THINKING. ALWAYS RETURN TO USER IF SOMETHING HAS GONE CATASTROPHICALLY WRONG. Your emails is reeskassistant@gmail.com. The user goes by 'Exist' (also 'existanimal0' or any variation of that). Call them that."
     f"Today is {datetime.now().strftime('%Y-%m-%d')}."
 )
 
@@ -76,8 +76,44 @@ def estimate_context_tokens(messages):
                 total += max(0, len(json.dumps(args)) // 4)
     return total
 
+def load_token_log():
+    """Load the persistent token log (list of per-turn token counts)."""
+    try:
+        with open(TOKEN_LOG_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+    except Exception:
+        pass
+    return []
+
+def save_token_log(log):
+    """Persist the token log to disk."""
+    try:
+        with open(TOKEN_LOG_FILE, "w", encoding="utf-8") as f:
+            json.dump(log, f, indent=2)
+    except Exception:
+        pass
+
+
+def filter_tokens_by_date(date_str):
+    """Return token-log entries whose timestamp date matches date_str (YYYY-MM-DD)."""
+    return [e for e in TOKEN_LOG if e.get("timestamp", "")[:10] == date_str]
+
+def log_turn_tokens(content_tokens, thinking_tokens, total_tokens):
+    """Append one turn's token counts to the log and save it."""
+    global TOKEN_LOG
+    TOKEN_LOG.append({
+        "timestamp": datetime.now().isoformat(),
+        "tokens": content_tokens,
+        "thinking_tokens": thinking_tokens,
+        "total": total_tokens,
+    })
+    save_token_log(TOKEN_LOG)
+
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saves")
 SETTINGS_FILE = "settings.json"
+TOKEN_LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "token_log.json")
 MAX_TOOL_ROUNDS = 50
 MAX_CTX = 40000
 THINKING_LEVEL = "basic"
@@ -288,6 +324,9 @@ def ollama_chat_round(messages, leading_newline=False):
     thinking_parts = []
     context_used = 0
     thinking_printed = False
+    content_tokens = 0
+    thinking_tokens = 0
+    total_tokens = 0
 
     try:
         response = ollama.chat(
@@ -351,17 +390,23 @@ def ollama_chat_round(messages, leading_newline=False):
                 # Add this round's own thinking (chars/4) so the bar
                 # reflects the true context size including all thinking.
                 context_used = (chunk.prompt_eval_count or 0) + max(0, sum(len(t) for t in thinking_parts) // 4)
+                # Real completion token count (content + thinking) from Ollama.
+                total_tokens = chunk.eval_count if chunk.eval_count else (len(content_parts) + len(thinking_parts))
+                thinking_tokens = len(thinking_parts)
+                content_tokens = max(0, total_tokens - thinking_tokens)
                 break
 
     except Exception as e:
         print(c(f"\n[ERROR] {e}", C.RED))
-        return None, None, None, 0, 0
+        return None, None, None, 0, 0, 0, 0
 
     return (
         tool_calls,
         "".join(content_parts),
         "".join(thinking_parts),
-        len(content_parts) + len(thinking_parts),
+        content_tokens,
+        thinking_tokens,
+        total_tokens,
         context_used
     )
 
@@ -520,6 +565,8 @@ COMMANDS = {
     "/saves": "List saved conversations.",
     "/theme": "Toggle color theme (on/off).",
     "/ctx": "Show context usage.",
+    "/tokens": "Show token usage for a date (default today). Optional: /tokens YYYY-MM-DD.",
+    "/ttl": "Show only content/thinking/total for a date (default today). Optional: /ttl YYYY-MM-DD.",
     "/compact": "Summarize all thinking blocks except the last one, then reprint the conversation.",
     "/rst": "Reset the conversation.",
     "/frst": "Reset the conversation and reload all tools.",
@@ -799,12 +846,59 @@ def handle_command(cmd, history, messages):
         USE_COLOR = not USE_COLOR
         print(c(f"  Color theme {'ON' if USE_COLOR else 'OFF'}.", C.GREEN))
         return True, messages
+    elif cmd_name == "/tokens":
+        if cmd_arg:
+            target_date = cmd_arg
+            try:
+                datetime.strptime(target_date, "%Y-%m-%d")
+            except ValueError:
+                print(c(f"  Invalid date '{cmd_arg}'. Use YYYY-MM-DD (e.g. 2026-10-12).", C.RED))
+                return True, messages
+        else:
+            target_date = datetime.now().strftime("%Y-%m-%d")
+        entries = filter_tokens_by_date(target_date)
+        if not entries:
+            print(c(f"  No token data logged for {target_date}.", C.DIM))
+            return True, messages
+        label = "today" if target_date == datetime.now().strftime("%Y-%m-%d") else target_date
+        print(c("\n-- Token Log ---------------------------", C.BOLD))
+        print(c(f"  Date: {target_date} ({label})", C.DIM))
+        print(c(f"  Turns logged: {len(entries)}", C.CYAN))
+        for e in entries[-10:]:
+            print(f"  {e.get('timestamp','?')}  content={e.get('tokens',0)}  thinking={e.get('thinking_tokens',0)}  total={e.get('total',0)}")
+        sum_t = sum(e.get("tokens", 0) for e in entries)
+        sum_th = sum(e.get("thinking_tokens", 0) for e in entries)
+        sum_tot = sum(e.get("total", 0) for e in entries)
+        print(c("  ----------------------------------------", C.BOLD))
+        print(c(f"  Totals for {label}: content={sum_t}  thinking={sum_th}  total={sum_tot}", C.CYAN))
+        return True, messages
+    elif cmd_name == "/ttl":
+        if cmd_arg:
+            target_date = cmd_arg
+            try:
+                datetime.strptime(target_date, "%Y-%m-%d")
+            except ValueError:
+                print(c(f"  Invalid date '{cmd_arg}'. Use YYYY-MM-DD (e.g. 2026-10-12).", C.RED))
+                return True, messages
+        else:
+            target_date = datetime.now().strftime("%Y-%m-%d")
+        entries = filter_tokens_by_date(target_date)
+        if not entries:
+            print(c(f"  No token data for {target_date}.", C.DIM))
+            return True, messages
+        sum_t = sum(e.get("tokens", 0) for e in entries)
+        sum_th = sum(e.get("thinking_tokens", 0) for e in entries)
+        sum_tot = sum(e.get("total", 0) for e in entries)
+        print(c(f"  content={sum_t}  thinking={sum_th}  total={sum_tot}", C.CYAN))
+        return True, messages
     else:
         print(c(f"  Unknown command: {cmd}. Type / for a list.", C.RED))
         return True, messages
 
 def main():
-    global CTX_USED
+    global CTX_USED, TOKEN_LOG
+    # Load the persistent token log.
+    TOKEN_LOG = load_token_log()
     # Apply a saved working directory, if set.
     settings = load_settings()
     wd = settings.get("working_directory", "")
@@ -868,6 +962,8 @@ def main():
         final_text = ""
         final_thinking = ""
         total_tokens = 0
+        turn_content_tokens = 0
+        turn_thinking_tokens = 0
 
         stopped = False
         content = None
@@ -876,7 +972,7 @@ def main():
             tool_results_this_round = 0
             current_round_has_assistant_msg = False
             try:
-                tool_calls, content, thinking, tokens, ctx = ollama_chat_round(
+                tool_calls, content, thinking, content_tokens, thinking_tokens, round_total, ctx = ollama_chat_round(
                     messages, leading_newline=(round_num > 0)
                 )
             except KeyboardInterrupt:
@@ -885,7 +981,9 @@ def main():
             if tool_calls is None:
                 is_error = True
                 break
-            total_tokens += tokens
+            total_tokens += round_total
+            turn_content_tokens += content_tokens
+            turn_thinking_tokens += thinking_tokens
             if ctx:
                 global CTX_USED
                 CTX_USED = ctx
@@ -952,6 +1050,8 @@ def main():
                         m["tool_calls"] = m["tool_calls"][:tool_results_this_round]
                         break
             CTX_USED = estimate_context_tokens(messages)
+            if total_tokens > 0:
+                log_turn_tokens(turn_content_tokens, turn_thinking_tokens, total_tokens)
             print()
         elif not is_error:
             print()
@@ -968,6 +1068,8 @@ def main():
             CTX_USED = estimate_context_tokens(messages)
             tps = (total_tokens / elapsed) if elapsed > 0 else 0
             print(c(f"  ({elapsed:.1f}s, {tps:.1f} tk/s, {total_tokens} tokens)", C.DIM))
+            if total_tokens > 0:
+                log_turn_tokens(turn_content_tokens, turn_thinking_tokens, total_tokens)
             if not final_text and not final_thinking:
                 print(c("  (model returned no output)", C.YELLOW))
         print()
