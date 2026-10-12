@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 memory.json
 token_log.json
+agent_test/
