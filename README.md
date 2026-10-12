@@ -171,10 +171,11 @@ Standalone folders (config.json + tool.py):
 
 - Streaming - assistant text prints token-by-token as it is generated.
 - Colors - ANSI colors (auto-detected; disable with the NO_COLOR env var or /theme).
-  - you> prompt: cyan
+  - you> prompt: cyan (bold)
   - assistant text: #f9f1a5
-  - tool calls: yellow
-  - tool results: dim
+  - thinking: dim
+  - tool calls: #2563eb (blue)
+  - tool results: #800080 (purple)
   - errors: red
 
 ## Project Structure
