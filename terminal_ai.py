@@ -126,6 +126,7 @@ THINKING_LEVELS = {
     "high":     {"think": "high",   "prompt": ""},
     "max":      {"think": "high",   "prompt": "Think VERY carefully about everything."},
 }
+AUTO_COMPACT = 0
 SESSION_TOKENS = 0
 CTX_USED = 0
 LAST_REAL_CTX = 0
@@ -566,13 +567,15 @@ COMMANDS = {
     "/theme": "Toggle color theme (on/off).",
     "/ctx": "Show context usage.",
     "/tokens": "Show token usage for a date (default today). Optional: /tokens YYYY-MM-DD.",
-    "/ttl": "Show only content/thinking/total for a date (default today). Optional: /ttl YYYY-MM-DD.",
+    "/total": "Show only content/thinking/total for a date (default today). Optional: /total YYYY-MM-DD.",
+    "/alltime": "Show content/thinking/total across all logged days.",
     "/compact": "Summarize all thinking blocks except the last one, then reprint the conversation.",
     "/rst": "Reset the conversation.",
     "/frst": "Reset the conversation and reload all tools.",
     "/cd": "Set the working directory (saved to settings.json).",
     "/files": "Open the current working directory in the file explorer.",
     "/think": "Set thinking level (off, low, basic, medium, xmedium, high, max).",
+    "/autocompact": "Auto-compact threshold in tokens (0 to disable). e.g. /autocompact 30000.",
     "/exit": "Exit the assistant.",
     "/quit": "Exit the assistant.",
 }
@@ -591,6 +594,48 @@ def show_commands():
         print(f"  {c(key, C.CYAN):<10} {desc}")
     print(c("  ----------------------------------------", C.BOLD))
     print(c("  Type anything else to chat with the AI.", C.DIM))
+
+def compact_thinking(messages, quiet=False):
+    """Summarize every thinking block except the most recent one via the
+    model, replacing each with a tight summary. Returns (messages, old_ctx,
+    new_ctx). If there is nothing to compact, old_ctx == new_ctx. quiet=True
+    suppresses the progress prints (used by auto-compact mid-task)."""
+    think_idx = [i for i, m in enumerate(messages)
+                 if m.get("role") == "assistant" and m.get("thinking")]
+    targets = think_idx[:-1] if len(think_idx) > 1 else []
+    old_ctx = estimate_context_tokens(messages)
+    if not targets:
+        return messages, old_ctx, old_ctx
+    if not quiet:
+        print(c(f"  Compacting {len(targets)} thinking block(s) via model...", C.CYAN))
+        if len(targets) > 20:
+            print(c("  This may take a while.", C.CYAN))
+    for n, i in enumerate(targets):
+        t = messages[i]["thinking"]
+        try:
+            resp = ollama.chat(
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": "SUMMARIZE THE THINKING BLOCK BELOW. KEEP ONLY KEY DECISIONS, CONCLUSIONS, AND IMPORTANT FACTS. REMOVE ALL STEP-BY-STEP REASONING. BE CONCISE. OUTPUT ONLY THE SUMMARY - NO PREAMBLE, NO EXPLANATION, NO META-COMMENTS."},
+                    {"role": "user", "content": t}
+                ],
+                think="low",
+                options={"num_ctx": MAX_CTX, "temperature": 0.1}
+            )
+            summary = resp.message.content.strip()
+            if summary:
+                messages[i]["thinking"] = summary
+        except Exception as e:
+            if not quiet:
+                print(c(f"  [warn] block {n+1}/{len(targets)}: {e}", C.YELLOW))
+        if not quiet:
+            sys.stdout.write(f"\r  {n+1}/{len(targets)} compacted")
+            sys.stdout.flush()
+    if not quiet:
+        print()
+    new_ctx = estimate_context_tokens(messages)
+    return messages, old_ctx, new_ctx
+
 
 def handle_command(cmd, history, messages):
     """Handle a slash command. Returns (should_continue, new_messages)."""
@@ -729,52 +774,17 @@ def handle_command(cmd, history, messages):
         print(c("  ----------------------------------------", C.BOLD))
         return True, messages
     elif cmd_name == "/compact":
-        def _est_tokens(text):
-            return max(1, len(text) // 4)
-        think_idx = [i for i, m in enumerate(messages)
-                     if m.get("role") == "assistant" and m.get("thinking")]
-        if not think_idx:
-            print(c("  No thinking blocks in this conversation.", C.DIM))
+        messages, old_ctx, new_ctx = compact_thinking(messages, quiet=False)
+        if old_ctx == new_ctx:
+            print(c("  Nothing to compact.", C.DIM))
             return True, messages
-        targets = think_idx[:-1] if len(think_idx) > 1 else []
-        if not targets:
-            print(c(f"  Only {len(think_idx)} thinking block(s). Nothing to compact.", C.DIM))
-            return True, messages
-        old_ctx = estimate_context_tokens(messages)
-        print(c(f"  Compacting {len(targets)} thinking block(s) via model...", C.CYAN))
-        if len(targets) > 20:
-            print(c("  This may take a while.", C.CYAN))
-        new_total = 0
-        for n, i in enumerate(targets):
-            t = messages[i]["thinking"]
-            try:
-                resp = ollama.chat(
-                    model=MODEL,
-                    messages=[
-                        {"role": "system", "content": "SUMMARIZE THE THINKING BLOCK BELOW. KEEP ONLY KEY DECISIONS, CONCLUSIONS, AND IMPORTANT FACTS. REMOVE ALL STEP-BY-STEP REASONING. BE CONCISE. OUTPUT ONLY THE SUMMARY - NO PREAMBLE, NO EXPLANATION, NO META-COMMENTS."},
-                        {"role": "user", "content": t}
-                    ],
-                    think="low",
-                    options={"num_ctx": MAX_CTX, "temperature": 0.1}
-                )
-                summary = resp.message.content.strip()
-                if summary:
-                    messages[i]["thinking"] = summary
-            except Exception as e:
-                print(c(f"  [warn] block {n+1}/{len(targets)}: {e}", C.YELLOW))
-            new_total += _est_tokens(messages[i]["thinking"])
-            sys.stdout.write(f"\r  {n+1}/{len(targets)} compacted")
-            sys.stdout.flush()
-        print()
-        new_ctx = estimate_context_tokens(messages)
-        saved = max(0, old_ctx - new_ctx)
         CTX_USED = new_ctx
         LAST_REAL_CTX = 0
         clear_terminal()
         print_status_block()
         replay_conversation(messages)
         print()
-        print(c(f"  Context: {old_ctx} -> {new_ctx} / {MAX_CTX}  ({saved} tokens freed)", C.CYAN))
+        print(c(f"  Context: {old_ctx} -> {new_ctx} / {MAX_CTX}  ({max(0, old_ctx - new_ctx)} tokens freed)", C.CYAN))
         return True, messages
     elif cmd_name == "/rst":
         messages = [{"role": "system", "content": full_system_prompt()}]
@@ -841,6 +851,36 @@ def handle_command(cmd, history, messages):
         print(c(f"\n  Thinking level set to: {THINKING_LEVEL}", C.GREEN))
         print(c("  ----------------------------------------", C.BOLD))
         return True, messages
+    elif cmd_name == "/autocompact":
+        global AUTO_COMPACT
+        if not cmd_arg:
+            if AUTO_COMPACT:
+                print(c(f"\n  Auto-compact: ON at {AUTO_COMPACT} tokens.", C.CYAN))
+            else:
+                print(c("\n  Auto-compact: OFF.", C.CYAN))
+            print(c("  Usage: /autocompact <tokens>  (0 to disable)", C.DIM))
+            print(c("  ----------------------------------------", C.BOLD))
+            return True, messages
+        try:
+            threshold = int(cmd_arg)
+        except ValueError:
+            print(c(f"  Not a number: {cmd_arg}", C.RED))
+            print(c("  Usage: /autocompact <tokens>  (0 to disable)", C.DIM))
+            print(c("  ----------------------------------------", C.BOLD))
+            return True, messages
+        if threshold < 0:
+            threshold = 0
+        AUTO_COMPACT = threshold
+        settings = load_settings()
+        settings["autocompact"] = threshold
+        save_settings(settings)
+        if threshold:
+            print(c(f"\n  Auto-compact: ON at {threshold} tokens.", C.GREEN))
+        else:
+            print(c("\n  Auto-compact: OFF.", C.GREEN))
+        print(c(f"  Saved to: {settings_path()}", C.DIM))
+        print(c("  ----------------------------------------", C.BOLD))
+        return True, messages
     elif cmd_name == "/theme":
         global USE_COLOR
         USE_COLOR = not USE_COLOR
@@ -872,7 +912,7 @@ def handle_command(cmd, history, messages):
         print(c("  ----------------------------------------", C.BOLD))
         print(c(f"  Totals for {label}: content={sum_t}  thinking={sum_th}  total={sum_tot}", C.CYAN))
         return True, messages
-    elif cmd_name == "/ttl":
+    elif cmd_name == "/total":
         if cmd_arg:
             target_date = cmd_arg
             try:
@@ -891,12 +931,25 @@ def handle_command(cmd, history, messages):
         sum_tot = sum(e.get("total", 0) for e in entries)
         print(c(f"  content={sum_t}  thinking={sum_th}  total={sum_tot}", C.CYAN))
         return True, messages
+    elif cmd_name == "/alltime":
+        if not TOKEN_LOG:
+            print(c("  No token data logged yet.", C.DIM))
+            return True, messages
+        sum_t = sum(e.get("tokens", 0) for e in TOKEN_LOG)
+        sum_th = sum(e.get("thinking_tokens", 0) for e in TOKEN_LOG)
+        sum_tot = sum(e.get("total", 0) for e in TOKEN_LOG)
+        days = len({e.get("timestamp", "")[:10] for e in TOKEN_LOG})
+        print(c("\n-- All-Time Token Log ------------------", C.BOLD))
+        print(c(f"  Turns logged: {len(TOKEN_LOG)}  across {days} day(s)", C.CYAN))
+        print(c(f"  content={sum_t}  thinking={sum_th}  total={sum_tot}", C.CYAN))
+        print(c("  ----------------------------------------", C.BOLD))
+        return True, messages
     else:
         print(c(f"  Unknown command: {cmd}. Type / for a list.", C.RED))
         return True, messages
 
 def main():
-    global CTX_USED, TOKEN_LOG
+    global CTX_USED, TOKEN_LOG, AUTO_COMPACT, LAST_REAL_CTX
     # Load the persistent token log.
     TOKEN_LOG = load_token_log()
     # Apply a saved working directory, if set.
@@ -904,6 +957,11 @@ def main():
     wd = settings.get("working_directory", "")
     if wd and os.path.isdir(wd):
         os.chdir(wd)
+    # Apply a saved auto-compact threshold (0 = disabled).
+    try:
+        AUTO_COMPACT = int(settings.get("autocompact", 0))
+    except (TypeError, ValueError):
+        AUTO_COMPACT = 0
 
     print(get_banner())
     print(c(f"  Working directory: {os.getcwd()}", C.DIM))
@@ -1025,6 +1083,24 @@ def main():
             except KeyboardInterrupt:
                 stopped = True
                 break
+            # Auto-compact: if context crossed the threshold, summarize old
+            # thinking blocks before the next round so the model keeps going
+            # instead of Ollama truncating the conversation from the front.
+            if not stopped and AUTO_COMPACT and tool_results_this_round:
+                cur = estimate_context_tokens(messages)
+                if cur >= AUTO_COMPACT:
+                    # Only fire if there is actually something to compact
+                    # (at least one thinking block besides the most recent).
+                    # Avoids a pointless Ollama call when context is all
+                    # tool results and compaction would free ~0 tokens.
+                    n_think = sum(1 for m in messages
+                                  if m.get("role") == "assistant" and m.get("thinking"))
+                    if n_think > 1:
+                        print(c(f"\n  [autocompact] context {cur} >= {AUTO_COMPACT} - compacting", C.YELLOW))
+                        messages, old_ctx, new_ctx = compact_thinking(messages, quiet=True)
+                        CTX_USED = new_ctx
+                        LAST_REAL_CTX = 0
+                        print(c(f"  [autocompact] {old_ctx} -> {new_ctx} tokens ({max(0, old_ctx - new_ctx)} freed)", C.CYAN))
 
         elapsed = time.time() - start
 

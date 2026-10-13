@@ -1,0 +1,62 @@
+{
+  "name": "google_calendar",
+  "description": "Google Calendar operations: list, read, create, update, delete, search events. User: existanimal0@gmail.com.",
+  "parameters": {
+    "type": "object",
+    "required": ["action"],
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "'list', 'read', 'create', 'update', 'delete', or 'search'"
+      },
+      "calendar_id": {
+        "type": "string",
+        "description": "Calendar ID (default: 'primary')"
+      },
+      "event_id": {
+        "type": "string",
+        "description": "Event ID (for read/update/delete)"
+      },
+      "query": {
+        "type": "string",
+        "description": "Search query (for search action)"
+      },
+      "time_min": {
+        "type": "string",
+        "description": "Start of time range, ISO 8601 (for list). e.g. '2026-10-12T00:00:00'"
+      },
+      "time_max": {
+        "type": "string",
+        "description": "End of time range, ISO 8601 (for list). e.g. '2026-10-19T00:00:00'"
+      },
+      "title": {
+        "type": "string",
+        "description": "Event title (for create/update)"
+      },
+      "start": {
+        "type": "string",
+        "description": "Start time, ISO 8601 (for create/update). e.g. '2026-10-15T14:00:00'"
+      },
+      "end": {
+        "type": "string",
+        "description": "End time, ISO 8601 (for create/update). e.g. '2026-10-15T15:00:00'"
+      },
+      "description": {
+        "type": "string",
+        "description": "Event description (for create/update)"
+      },
+      "location": {
+        "type": "string",
+        "description": "Event location (for create/update)"
+      },
+      "attendees": {
+        "type": "string",
+        "description": "Comma-separated email addresses (for create/update)"
+      },
+      "max_results": {
+        "type": "integer",
+        "description": "Max events to return (default 20)"
+      }
+    }
+  }
+}

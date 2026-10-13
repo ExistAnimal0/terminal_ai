@@ -32,7 +32,7 @@ def _read_key_linux(fd):
 # ---------------------------------------------------------------------------
 # Tool
 # ---------------------------------------------------------------------------
-def ask(question: str, options: str, allow_custom: bool = True) -> str:
+def ask(question: str, options: str, allow_custom: bool = False) -> str:
     """
     Show an interactive menu in the terminal.
     - Arrow up/down to navigate

@@ -24,7 +24,7 @@ terminal_ai/
   README.md              human-facing docs
   LICENSE                MIT
   assistant.bat          Windows launcher (cd to script dir, run python)
-  settings.json         persistent settings (working_directory)
+  settings.json         persistent settings (working_directory, autocompact)
   .env                   secrets / per-machine config (gitignored)
   .env.example           template for .env (committed)
   spotify_login.py       standalone Spotify OAuth login script
@@ -33,7 +33,10 @@ terminal_ai/
   token_log.json        per-day token usage log (gitignored)
   inbox/               drop folder for files to process
   saves/               saved conversations (created on first /save)
+  notes/               note folders for complex tasks (gitignored)
   tools/               tool definitions (see Tool conventions below)
+  tools/google_calendar/  Google Calendar tool (token.json gitignored)
+  tools/computer_use/     GUI computer control (pyautogui + Pillow + vision)
 
 ### Config (top of terminal_ai.py)
 
@@ -45,6 +48,8 @@ terminal_ai/
 - THINKING_LEVELS - map of level -> {think param, prompt suffix}
 - SAVE_DIR - where conversations are saved (anchored to the script dir)
 - SETTINGS_FILE - "settings.json" (next to the script)
+- AUTO_COMPACT - auto-compact threshold in tokens (0 = disabled). Loaded from
+  settings.json["autocompact"] at startup; set via /autocompact <tokens>.
 
 There is no OLLAMA_URL constant. The app uses the `ollama` Python library,
 which talks to the default server at http://localhost:11434.
@@ -56,7 +61,8 @@ is the committed template. Keys: OLLAMA_URL, MODEL, SPOTIFY_CLIENT_ID,
 SPOTIFY_CLIENT_SECRET, SPOTIFY_REDIRECT_URI, GMAIL_CLIENT_ID,
 GMAIL_CLIENT_SECRET, GMAIL_ACCOUNT, NO_COLOR.
 
-- spotify/ and gmail/ each parse .env themselves (no python-dotenv dependency).
+- spotify/, gmail/, and google_calendar/ each parse .env themselves (no
+  python-dotenv dependency). google_calendar reuses GMAIL_CLIENT_ID/SECRET.
 - spotify.json holds only runtime tokens (access/refresh/expires) - gitignored.
 - gmail/token.json holds runtime tokens and stays tracked (client_secret.json
   is gitignored; the tool builds its client config from .env in-memory).
@@ -74,8 +80,8 @@ Default is "basic" (think=medium, prompt "Don't think too hard.").
 ### Commands
 
 / (list), /help, /clear, /history, /info, /model, /tools,
-/save [name], /load [name], /saves, /ctx, /compact, /rst, /frst,
-/cd [path], /files, /think [level], /theme, /exit, /quit
+/save [name], /load [name], /saves, /ctx, /compact, /autocompact [tokens],
+/rst, /frst, /cd [path], /files, /think [level], /theme, /exit, /quit
 
 - /save [name] - saves as conv_<name>.json (adds .json and conv_ prefix if missing)
 - /load [name] - loads a saved conversation (restores full context and replays it).
@@ -85,6 +91,12 @@ Default is "basic" (think=medium, prompt "Don't think too hard.").
   prompt_eval_count; falls back to a chars/4 estimate when it is None.
 - /compact - summarizes all thinking blocks except the last one via the model,
   then reprints the compacted conversation. Reports tokens freed.
+- /autocompact [tokens] - sets the auto-compact threshold (persisted to
+  settings.json). 0 disables it. When set, the main loop checks context after
+  each tool round; if it crosses the threshold AND there is more than one
+  thinking block to summarize, it compacts old thinking blocks (quietly)
+  before the next round, so the model keeps going instead of Ollama truncating
+  the conversation from the front. No argument shows the current setting.
 - /rst - resets the conversation (clears context back to the system prompt)
 - /frst - resets the conversation AND reloads all tools
 - /cd [path] - sets the working directory (supports ~ and %vars%; persisted to
@@ -129,13 +141,22 @@ Genre packages (via tools.py aggregation):
 
 Standalone folders (config.json + tool.py):
   browser/          headless Chromium via Playwright (goto, text, html, title,
-                    screenshot, click, type, wait, eval, close)
+                    screenshot, click, type, wait, eval, close). Playwright
+                    sync API runs in a dedicated worker thread to avoid
+                    "sync API inside an asyncio loop" (ollama/httpx leaves
+                    a loop in the main thread). Uses
+                    launch_persistent_context(browser_profile/) so cookies
+                    and logins survive across restarts. browser_profile/
+                    is gitignored (per-user).
   clipboard/        get / set system clipboard
   csv_parse/        read, filter, or summarize a CSV
   download/         download a file from a URL
   git_ops/          status, log, diff, commit
   gmail/            list, read, send, download attachments (user: existanimal0@gmail.com).
                     OAuth config from .env; token.json (runtime) stays tracked
+  google_calendar/  list, read, create, update, delete, search events.
+                    Reuses Gmail's OAuth client (GMAIL_CLIENT_ID/SECRET).
+                    token.json (gitignored). First run opens browser for OAuth.
   grep/             regex search across files in a directory
   image_downloader/ download an image from a URL
   image_search/     image search via DuckDuckGo
@@ -151,6 +172,18 @@ Standalone folders (config.json + tool.py):
   memory/           persistent key-value memory with semantic search
                     (nomic-embed-text via Ollama, cosine similarity,
                     threshold 0.55; falls back to substring if Ollama is down)
+  computer_use/     GUI-level computer control (screenshot, analyze_screen,
+                    mouse_move, mouse_click, mouse_double_click, mouse_drag,
+                    mouse_scroll, keyboard_type, keyboard_press,
+                    keyboard_hotkey, app_launch). Uses pyautogui + Pillow.
+                    analyze_screen sends a screenshot to the vision model for
+                    element location. Window management (list, focus,
+                    minimize, close) is a to-do.
+  notes/            persistent note folders for complex tasks (like Claude Code
+                    skills). Organize notes by folder (e.g. 'coding', 'user').
+                    write, read, list (all folders or one folder), read_folder,
+                    delete. Stored under notes/ (gitignored). Not for quick facts
+                    - use memory for those.
 
 ### Conventions
 

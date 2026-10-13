@@ -20,6 +20,7 @@ Actions:
 
 import os
 import re
+import concurrent.futures
 
 try:
     from playwright.sync_api import sync_playwright
@@ -27,12 +28,22 @@ try:
 except Exception:
     _HAS_PW = False
 
+# Dedicated worker thread for Playwright's sync API.
+# The main thread may already have a running asyncio event loop (e.g. from
+# httpx/ollama), which makes sync_playwright() raise
+# "Playwright sync API inside an asyncio loop".  A fresh thread has no
+# event loop, so the sync API works there.
+_PW_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="pw")
+
 
 # Persistent browser state (survives across tool() calls in one session)
 _PW = None
-_BROWSER = None
 _CONTEXT = None
 _PAGE = None
+
+# On-disk profile dir so cookies/logins survive across terminal_ai restarts.
+# Lives in the project root; gitignored so it is per-user.
+USER_DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "browser_profile")
 
 
 def _err(msg):
@@ -45,16 +56,18 @@ def _clip(text, n=8000):
 
 
 def _ensure_browser():
-    """Lazily start the browser/context/page. Returns (page, error)."""
-    global _PW, _BROWSER, _CONTEXT, _PAGE
+    """Lazily start the persistent browser context/page. Returns (page, error)."""
+    global _PW, _CONTEXT, _PAGE
     if not _HAS_PW:
         return None, _err("playwright not installed (pip install playwright && playwright install chromium)")
     if _PAGE is not None:
         return _PAGE, None
     try:
+        os.makedirs(USER_DATA_DIR, exist_ok=True)
         _PW = sync_playwright().start()
-        _BROWSER = _PW.chromium.launch(headless=False)
-        _CONTEXT = _BROWSER.new_context(viewport={"width": 1280, "height": 900})
+        _CONTEXT = _PW.chromium.launch_persistent_context(
+            USER_DATA_DIR, headless=False, viewport={"width": 1280, "height": 900}
+        )
         _PAGE = _CONTEXT.new_page()
         return _PAGE, None
     except Exception as e:
@@ -63,8 +76,8 @@ def _ensure_browser():
 
 
 def _teardown():
-    global _PW, _BROWSER, _CONTEXT, _PAGE
-    for obj in (_PAGE, _CONTEXT, _BROWSER):
+    global _PW, _CONTEXT, _PAGE
+    for obj in (_PAGE, _CONTEXT):
         try:
             if obj is not None:
                 obj.close()
@@ -75,7 +88,7 @@ def _teardown():
             _PW.stop()
         except Exception:
             pass
-    _PAGE = _CONTEXT = _BROWSER = _PW = None
+    _PAGE = _CONTEXT = _PW = None
 
 
 def _goto(page, url, wait_ms=1500):
@@ -98,11 +111,9 @@ def _clean_text(html):
     return text.strip()
 
 
-def tool(action, url=None, selector=None, text=None, expression=None,
-         output=None, wait_ms=1500, timeout=10000, max_chars=8000):
-    if not _HAS_PW:
-        return _err("playwright not installed (pip install playwright && playwright install chromium)")
-
+def _pw_tool(action, url=None, selector=None, text=None, expression=None,
+             output=None, wait_ms=1500, timeout=10000, max_chars=8000):
+    """Playwright logic. Runs in the dedicated worker thread."""
     action = (action or "").strip().lower()
 
     # close: tear down and report
@@ -177,3 +188,20 @@ def tool(action, url=None, selector=None, text=None, expression=None,
 
     except Exception as e:
         return _err(f"{action} failed: {e}")
+
+
+def tool(action, url=None, selector=None, text=None, expression=None,
+         output=None, wait_ms=1500, timeout=10000, max_chars=8000):
+    """Entry point called by the main app. Submits Playwright work to a
+    dedicated thread so the sync API never collides with a running
+    asyncio event loop in the main thread."""
+    if not _HAS_PW:
+        return _err("playwright not installed (pip install playwright && playwright install chromium)")
+    try:
+        future = _PW_EXECUTOR.submit(
+            _pw_tool, action, url, selector, text, expression,
+            output, wait_ms, timeout, max_chars,
+        )
+        return future.result()
+    except Exception as e:
+        return _err(f"browser tool error: {e}")

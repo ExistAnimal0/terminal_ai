@@ -1,0 +1,26 @@
+{
+  "name": "computer_use",
+  "description": "GUI-level computer control: mouse, keyboard, screenshot, screen analysis, and app launch. Actions: screenshot, analyze_screen, mouse_move, mouse_click, mouse_double_click, mouse_drag, mouse_scroll, keyboard_type, keyboard_press, keyboard_hotkey, app_launch.",
+  "parameters": {
+    "type": "object",
+    "required": ["action"],
+    "properties": {
+      "action": {
+        "type": "string",
+        "description": "One of: screenshot, analyze_screen, mouse_move, mouse_click, mouse_double_click, mouse_drag, mouse_scroll, keyboard_type, keyboard_press, keyboard_hotkey, app_launch"
+      },
+      "x": {"type": "integer", "description": "X coordinate (for mouse actions, region)"},
+      "y": {"type": "integer", "description": "Y coordinate (for mouse actions, region)"},
+      "x2": {"type": "integer", "description": "Second X coordinate (for mouse_drag)"},
+      "y2": {"type": "integer", "description": "Second Y coordinate (for mouse_drag)"},
+      "button": {"type": "string", "description": "Mouse button: left (default), right, middle"},
+      "amount": {"type": "integer", "description": "Scroll amount. Positive=up, negative=down (for mouse_scroll)"},
+      "text": {"type": "string", "description": "Text to type (for keyboard_type)"},
+      "key": {"type": "string", "description": "Key to press: enter, tab, escape, f5, etc. (for keyboard_press)"},
+      "keys": {"type": "string", "description": "Hotkey combo, e.g. 'ctrl+c', 'alt+tab' (for keyboard_hotkey)"},
+      "name": {"type": "string", "description": "App name or path to launch (for app_launch)"},
+      "prompt": {"type": "string", "description": "What to ask the vision model (for analyze_screen). e.g. 'What are the pixel coordinates of the Save button?'"},
+      "region": {"type": "string", "description": "Crop region 'x,y,w,h' for analyze_screen to zoom in on a sub-area"}
+    }
+  }
+}
