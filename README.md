@@ -59,6 +59,30 @@ Change MODEL to use any other installed Ollama model.
 Persistent settings live in settings.json (next to the script). Currently it stores
 working_directory, which /cd writes and startup re-applies.
 
+## Secrets (.env)
+
+OAuth secrets live in `.env` (gitignored), not in the tool folders. Copy
+`.env.example` to `.env` and fill in your values.
+
+| Key | Purpose |
+|---|---|
+| OLLAMA_URL | Ollama server (default http://localhost:11434) |
+| MODEL | Model to chat with |
+| SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET | Spotify app credentials |
+| SPOTIFY_REDIRECT_URI | Spotify redirect URI (e.g. https://spotify.com) |
+| GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET | Google OAuth credentials |
+| GMAIL_ACCOUNT | Your Gmail address |
+| NO_COLOR | Set to 1 to disable ANSI colors |
+
+The spotify and gmail tools parse `.env` themselves (no python-dotenv
+dependency). Spotify runtime tokens are stored in `spotify.json` (gitignored);
+Gmail runtime tokens are stored in `tools/gmail/token.json` (tracked).
+
+To get Spotify credentials: go to https://developer.spotify.com/dashboard,
+create an app, copy the Client ID and Client Secret, and add your redirect URI.
+Then run `python spotify_login.py` to complete the one-time login (it opens the
+authorize URL, you click Agree, and paste the redirect URL back).
+
 ## Thinking Levels
 
 /think <level> sets the thinking level. Valid levels:
@@ -171,14 +195,14 @@ Standalone folders (config.json + tool.py):
 | csv_parse | tools/csv_parse/ | Read, filter, or summarize a CSV |
 | download | tools/download/ | Download a file from a URL |
 | git_ops | tools/git_ops/ | status, log, diff, commit |
-| gmail | tools/gmail/ | list, read, send, download attachments (user: existanimal0@gmail.com) |
+| gmail | tools/gmail/ | list, read, send, download attachments (user: existanimal0@gmail.com). OAuth config from .env; token.json stays tracked |
 | grep | tools/grep/ | Regex search across files in a directory |
 | image_downloader | tools/image_downloader/ | Download an image from a URL |
 | image_search | tools/image_search/ | Image search via DuckDuckGo |
 | open_file | tools/open_file/ | Open a file in its default app |
 | open_url | tools/open_url/ | Open a URL in the default browser |
 | regex | tools/regex/ | Match or replace text with a regex |
-| spotify | tools/spotify/ | Control Spotify playback (status, play, pause, next, previous, volume, search, play_id) |
+| spotify | tools/spotify/ | Control Spotify playback (status, play, pause, next, previous, volume, search, play_id). OAuth config from .env; runtime tokens in spotify.json (gitignored). First login via spotify_login.py |
 | subagent | tools/subagent/ | Spawn and manage sub-agents (spawn, run, run_all, send, read, status, list, kill, clear) with a shared message bus |
 | memory | tools/memory/ | Persistent key-value memory with semantic search (nomic-embed-text via Ollama, cosine similarity, threshold 0.55; falls back to substring if Ollama is down) |
 
@@ -204,7 +228,11 @@ terminal_ai/
 +-- LICENSE                # MIT
 +-- assistant.bat          # Windows launcher (cd to script dir, run python)
 +-- settings.json         # persistent settings (working_directory)
-+-- spotify.json          # Spotify OAuth tokens (client_id, access/refresh)
++-- .env                  # secrets / per-machine config (gitignored)
++-- .env.example          # template for .env (committed)
++-- spotify_login.py      # standalone Spotify OAuth login script
++-- spotify.json          # Spotify runtime tokens only (gitignored)
++-- token_log.json        # per-day token usage log (gitignored)
 +-- inbox/               # drop folder for files to process
 +-- saves/               # saved conversations (created on first /save)
 +-- tools/               # tool definitions (see Tool System above)

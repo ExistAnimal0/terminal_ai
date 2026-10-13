@@ -8,13 +8,29 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
-CLIENT_SECRET = os.path.join(os.path.dirname(__file__), "client_secret.json")
 TOKEN_FILE = os.path.join(os.path.dirname(__file__), "token.json")
+ENV_PATH = os.path.join(os.path.dirname(__file__), "..", "..", ".env")
 API_NAME, API_VERSION = "gmail", "v1"
+
+
+def _load_env():
+    """Parse .env file into a dict."""
+    env = {}
+    if os.path.exists(ENV_PATH):
+        with open(ENV_PATH) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    env[k.strip()] = v.strip()
+    return env
 
 
 def _get_service():
     """Return an authorized Gmail service. First run opens browser for OAuth."""
+    env = _load_env()
+    client_id = env.get("GMAIL_CLIENT_ID", "")
+    client_secret = env.get("GMAIL_CLIENT_SECRET", "")
     creds = None
     if os.path.exists(TOKEN_FILE):
         import json
@@ -24,16 +40,25 @@ def _get_service():
             token=td.get("token"),
             refresh_token=td.get("refresh_token"),
             token_uri=td.get("token_uri"),
-            client_id=td.get("client_id"),
-            client_secret=td.get("client_secret"),
+            client_id=td.get("client_id") or client_id,
+            client_secret=td.get("client_secret") or client_secret,
         )
     if creds is None or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                CLIENT_SECRET, SCOPES
-            )
+            # Build client config from .env (no client_secret.json needed)
+            client_config = {
+                "installed": {
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "redirect_uris": ["http://localhost"],
+                }
+            }
+            flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
             creds = flow.run_local_server(port=0)
         with open(TOKEN_FILE, "w") as f:
             f.write(creds.to_json())

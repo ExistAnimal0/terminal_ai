@@ -1,6 +1,9 @@
 saves/
 __pycache__/
 *.pyc
+.env
+spotify.json
+tools/gmail/client_secret.json
 memory.json
 token_log.json
 agent_test/

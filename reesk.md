@@ -25,8 +25,12 @@ terminal_ai/
   LICENSE                MIT
   assistant.bat          Windows launcher (cd to script dir, run python)
   settings.json         persistent settings (working_directory)
-  spotify.json          Spotify OAuth tokens (client_id, access/refresh)
+  .env                   secrets / per-machine config (gitignored)
+  .env.example           template for .env (committed)
+  spotify_login.py       standalone Spotify OAuth login script
+  spotify.json          Spotify runtime tokens only (gitignored)
   memory.json           persistent memory store (key -> {value, embedding})
+  token_log.json        per-day token usage log (gitignored)
   inbox/               drop folder for files to process
   saves/               saved conversations (created on first /save)
   tools/               tool definitions (see Tool conventions below)
@@ -44,6 +48,20 @@ terminal_ai/
 
 There is no OLLAMA_URL constant. The app uses the `ollama` Python library,
 which talks to the default server at http://localhost:11434.
+
+### Secrets (.env)
+
+OAuth secrets live in .env (gitignored), not in the tool folders. .env.example
+is the committed template. Keys: OLLAMA_URL, MODEL, SPOTIFY_CLIENT_ID,
+SPOTIFY_CLIENT_SECRET, SPOTIFY_REDIRECT_URI, GMAIL_CLIENT_ID,
+GMAIL_CLIENT_SECRET, GMAIL_ACCOUNT, NO_COLOR.
+
+- spotify/ and gmail/ each parse .env themselves (no python-dotenv dependency).
+- spotify.json holds only runtime tokens (access/refresh/expires) - gitignored.
+- gmail/token.json holds runtime tokens and stays tracked (client_secret.json
+  is gitignored; the tool builds its client config from .env in-memory).
+- First Spotify login: run `python spotify_login.py` (opens the authorize URL,
+  you click Agree, paste the redirect URL back, tokens saved to spotify.json).
 
 ### Thinking levels
 
@@ -116,7 +134,8 @@ Standalone folders (config.json + tool.py):
   csv_parse/        read, filter, or summarize a CSV
   download/         download a file from a URL
   git_ops/          status, log, diff, commit
-  gmail/            list, read, send, download attachments (user: existanimal0@gmail.com)
+  gmail/            list, read, send, download attachments (user: existanimal0@gmail.com).
+                    OAuth config from .env; token.json (runtime) stays tracked
   grep/             regex search across files in a directory
   image_downloader/ download an image from a URL
   image_search/     image search via DuckDuckGo
@@ -124,7 +143,9 @@ Standalone folders (config.json + tool.py):
   open_url/         open a URL in the default browser
   regex/            match or replace text with a regex
   spotify/          control Spotify playback (status, play, pause, next,
-                    previous, volume, search, play_id)
+                    previous, volume, search, play_id). OAuth config from .env;
+                    runtime tokens in spotify.json (gitignored). First login via
+                    spotify_login.py
   subagent/         spawn and manage sub-agents (spawn, run, run_all, send,
                     read, status, list, kill, clear) with a shared message bus
   memory/           persistent key-value memory with semantic search
