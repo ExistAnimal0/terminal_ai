@@ -1,3 +1,4 @@
 {
-  "working_directory": "c:/terminal_ai"
+  "working_directory": "c:/terminal_ai",
+  "autocompact": 25000
 }

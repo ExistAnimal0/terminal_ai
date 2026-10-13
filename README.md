@@ -12,12 +12,14 @@ streaming output and a pluggable tool system.
   - `ddgs` - required by the search tool
   - `playwright` + Chromium - required by the browser tool
   - `ffmpeg` - required by the analyze_video tool
+  - `pyautogui` + `Pillow` - required by the computer_use tool
 
 ```bash
 ollama serve
 ollama pull orcarouter/Qwen3.8-27B-Uncensored:q3_K_S
 pip install ddgs
 pip install playwright && playwright install chromium
+pip install pyautogui Pillow
 ```
 
 ## Running
