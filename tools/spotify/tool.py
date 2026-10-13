@@ -1,18 +1,54 @@
 import json, os, time, urllib.request, urllib.parse, urllib.error
 
 CRED_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "spotify.json")
+ENV_PATH = os.path.join(os.path.dirname(__file__), "..", "..", ".env")
 API = "https://api.spotify.com/v1"
 TOKEN_URL = "https://accounts.spotify.com/api/token"
 
 
+def _load_env():
+    """Parse .env file into a dict."""
+    env = {}
+    if os.path.exists(ENV_PATH):
+        with open(ENV_PATH) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    env[k.strip()] = v.strip()
+    return env
+
+
 def _load_creds():
-    with open(CRED_PATH) as f:
-        return json.load(f)
+    """Load runtime tokens from spotify.json, OAuth config from .env."""
+    env = _load_env()
+    creds = {
+        "client_id": env.get("SPOTIFY_CLIENT_ID", ""),
+        "client_secret": env.get("SPOTIFY_CLIENT_SECRET", ""),
+        "redirect_uri": env.get("SPOTIFY_REDIRECT_URI", "https://spotify.com"),
+    }
+    if os.path.exists(CRED_PATH):
+        with open(CRED_PATH) as f:
+            stored = json.load(f)
+        creds["access_token"] = stored.get("access_token", "")
+        creds["refresh_token"] = stored.get("refresh_token", "")
+        creds["expires_at"] = stored.get("expires_at", 0)
+        creds["expires_in"] = stored.get("expires_in", 3600)
+        creds["scopes"] = stored.get("scopes", "")
+    return creds
 
 
 def _save_creds(creds):
+    """Persist only runtime tokens (OAuth config lives in .env)."""
+    runtime = {
+        "access_token": creds.get("access_token", ""),
+        "refresh_token": creds.get("refresh_token", ""),
+        "expires_in": creds.get("expires_in", 3600),
+        "expires_at": creds.get("expires_at", 0),
+        "scopes": creds.get("scopes", ""),
+    }
     with open(CRED_PATH, "w") as f:
-        json.dump(creds, f, indent=2)
+        json.dump(runtime, f, indent=2)
 
 
 def _refresh_token(creds):
