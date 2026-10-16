@@ -7,7 +7,7 @@
     "properties": {
       "action": {
         "type": "string",
-        "description": "One of: goto, text, html, title, screenshot, click, type, wait, eval, close."
+        "description": "One of: goto, text, html, title, screenshot, click, type, wait, eval, cookies, cookies_export, close."
       },
       "url": {
         "type": "string",
@@ -40,6 +40,10 @@
       "max_chars": {
         "type": "integer",
         "description": "Max characters to return for text/html/eval (default 8000)."
+      },
+      "cookie_file": {
+        "type": "string",
+        "description": "Path to a JSON file of cookies to import (used with action=cookies). Format: array of {name, value, domain, path, expires, httpOnly, secure, sameSite}."
       }
     }
   }

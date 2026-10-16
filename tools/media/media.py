@@ -40,7 +40,7 @@ def _ask(prompt, image_paths):
     response = ollama.chat(
         model=MODEL,
         messages=messages,
-        options={"num_ctx": 40000, "temperature": 0.1},
+        options={"num_ctx": 70000, "temperature": 0.1},
     )
     return response["message"]["content"]
 
