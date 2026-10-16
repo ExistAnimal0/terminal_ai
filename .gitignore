@@ -10,3 +10,4 @@ token_log.json
 notes/
 agent_test/
 browser_profile/
+_dump*.txt

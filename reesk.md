@@ -24,7 +24,7 @@ terminal_ai/
   README.md              human-facing docs
   LICENSE                MIT
   assistant.bat          Windows launcher (cd to script dir, run python)
-  settings.json         persistent settings (working_directory, autocompact)
+  settings.json         persistent settings (working_directory, autocompact, temperature)
   .env                   secrets / per-machine config (gitignored)
   .env.example           template for .env (committed)
   spotify_login.py       standalone Spotify OAuth login script
@@ -81,6 +81,7 @@ Default is "basic" (think=medium, prompt "Don't think too hard.").
 
 / (list), /help, /clear, /history, /info, /model, /tools,
 /save [name], /load [name], /saves, /ctx, /compact, /autocompact [tokens],
+/temp [value],
 /rst, /frst, /cd [path], /files, /think [level], /theme, /exit, /quit
 
 - /save [name] - saves as conv_<name>.json (adds .json and conv_ prefix if missing)
@@ -104,6 +105,8 @@ Default is "basic" (think=medium, prompt "Don't think too hard.").
   model sees the new CWD.
 - /files - opens the current working directory in the OS file explorer
 - /think [level] - set thinking level (off, low, basic, medium, xmedium, high, max)
+- /temp [value] - set sampling temperature (0.0-2.0, clamped). Persisted to
+  settings.json["temperature"]; re-applied at startup. Default 0.1.
 - /theme - toggle colored output on/off
 
 ### Tool conventions
@@ -141,13 +144,16 @@ Genre packages (via tools.py aggregation):
 
 Standalone folders (config.json + tool.py):
   browser/          headless Chromium via Playwright (goto, text, html, title,
-                    screenshot, click, type, wait, eval, close). Playwright
-                    sync API runs in a dedicated worker thread to avoid
-                    "sync API inside an asyncio loop" (ollama/httpx leaves
-                    a loop in the main thread). Uses
-                    launch_persistent_context(browser_profile/) so cookies
-                    and logins survive across restarts. browser_profile/
-                    is gitignored (per-user).
+                    screenshot, click, type, wait, eval, cookies,
+                    cookies_export, close). Playwright sync API runs in a
+                    dedicated worker thread to avoid "sync API inside an
+                    asyncio loop" (ollama/httpx leaves a loop in the main
+                    thread). Uses launch_persistent_context(browser_profile/)
+                    so cookies and logins survive across restarts.
+                    browser_profile/ is gitignored (per-user).
+                    cookies: import cookies from a JSON file (cookie_file
+                    param) into the context. cookies_export: dump current
+                    context cookies to a JSON file (output param).
   clipboard/        get / set system clipboard
   csv_parse/        read, filter, or summarize a CSV
   download/         download a file from a URL

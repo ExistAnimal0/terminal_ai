@@ -89,7 +89,7 @@ def _list(g, query="is:unread", max_results=20):
                        if h["name"] == "From"), "?")
         date = next((h["value"] for h in hdrs
                      if h["name"] == "Date"), "?")
-        out.append(f"{full['threadId']} | {date} | {sender} | {subj}")
+        out.append(f"{full['id']} | {full.get('threadId','')} | {date} | {sender} | {subj}")
     return "\n".join(out) or "(no messages)"
 
 

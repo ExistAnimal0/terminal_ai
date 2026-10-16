@@ -115,7 +115,7 @@ SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saves")
 SETTINGS_FILE = "settings.json"
 TOKEN_LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "token_log.json")
 MAX_TOOL_ROUNDS = 50
-MAX_CTX = 40000
+MAX_CTX = 70000
 THINKING_LEVEL = "basic"
 THINKING_LEVELS = {
     "off":      {"think": False,     "prompt": ""},
@@ -127,6 +127,7 @@ THINKING_LEVELS = {
     "max":      {"think": "high",   "prompt": "Think VERY carefully about everything."},
 }
 AUTO_COMPACT = 0
+TEMPERATURE = 0.1
 SESSION_TOKENS = 0
 CTX_USED = 0
 LAST_REAL_CTX = 0
@@ -337,7 +338,7 @@ def ollama_chat_round(messages, leading_newline=False):
             think=think_param,
             options={
                 "num_ctx": MAX_CTX,
-                "temperature": 0.1
+                "temperature": TEMPERATURE
             },
             stream=True
         )
@@ -576,6 +577,7 @@ COMMANDS = {
     "/files": "Open the current working directory in the file explorer.",
     "/think": "Set thinking level (off, low, basic, medium, xmedium, high, max).",
     "/autocompact": "Auto-compact threshold in tokens (0 to disable). e.g. /autocompact 30000.",
+    "/temp": "Set sampling temperature (0.0-2.0). e.g. /temp 0.7. Saved to settings.json.",
     "/exit": "Exit the assistant.",
     "/quit": "Exit the assistant.",
 }
@@ -881,6 +883,32 @@ def handle_command(cmd, history, messages):
         print(c(f"  Saved to: {settings_path()}", C.DIM))
         print(c("  ----------------------------------------", C.BOLD))
         return True, messages
+    elif cmd_name == "/temp":
+        global TEMPERATURE
+        if not cmd_arg:
+            print(c(f"\n  Temperature: {TEMPERATURE}", C.CYAN))
+            print(c("  Usage: /temp <0.0-2.0>  (e.g. /temp 0.7)", C.DIM))
+            print(c("  ----------------------------------------", C.BOLD))
+            return True, messages
+        try:
+            temp = float(cmd_arg)
+        except ValueError:
+            print(c(f"  Not a number: {cmd_arg}", C.RED))
+            print(c("  Usage: /temp <0.0-2.0>  (e.g. /temp 0.7)", C.DIM))
+            print(c("  ----------------------------------------", C.BOLD))
+            return True, messages
+        if temp < 0.0:
+            temp = 0.0
+        if temp > 2.0:
+            temp = 2.0
+        TEMPERATURE = temp
+        settings = load_settings()
+        settings["temperature"] = temp
+        save_settings(settings)
+        print(c(f"\n  Temperature set to: {temp}", C.GREEN))
+        print(c(f"  Saved to: {settings_path()}", C.DIM))
+        print(c("  ----------------------------------------", C.BOLD))
+        return True, messages
     elif cmd_name == "/theme":
         global USE_COLOR
         USE_COLOR = not USE_COLOR
@@ -949,7 +977,7 @@ def handle_command(cmd, history, messages):
         return True, messages
 
 def main():
-    global CTX_USED, TOKEN_LOG, AUTO_COMPACT, LAST_REAL_CTX
+    global CTX_USED, TOKEN_LOG, AUTO_COMPACT, LAST_REAL_CTX, TEMPERATURE
     # Load the persistent token log.
     TOKEN_LOG = load_token_log()
     # Apply a saved working directory, if set.
@@ -962,6 +990,11 @@ def main():
         AUTO_COMPACT = int(settings.get("autocompact", 0))
     except (TypeError, ValueError):
         AUTO_COMPACT = 0
+    # Apply a saved sampling temperature (default 0.1).
+    try:
+        TEMPERATURE = float(settings.get("temperature", 0.1))
+    except (TypeError, ValueError):
+        TEMPERATURE = 0.1
 
     print(get_banner())
     print(c(f"  Working directory: {os.getcwd()}", C.DIM))

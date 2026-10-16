@@ -15,6 +15,8 @@ Actions:
   type       type text into an element (CSS selector) on the current page
   wait       wait for a selector to appear
   eval       run a JS expression on the current page, return the result
+  cookies    import cookies from a JSON file (cookie_file param) into the context
+  cookies_export  dump current context cookies to a JSON file (output param)
   close      close the browser and free resources
 """
 
@@ -112,7 +114,8 @@ def _clean_text(html):
 
 
 def _pw_tool(action, url=None, selector=None, text=None, expression=None,
-             output=None, wait_ms=1500, timeout=10000, max_chars=8000):
+             output=None, wait_ms=1500, timeout=10000, max_chars=8000,
+             cookie_file=None):
     """Playwright logic. Runs in the dedicated worker thread."""
     action = (action or "").strip().lower()
 
@@ -184,14 +187,46 @@ def _pw_tool(action, url=None, selector=None, text=None, expression=None,
             result = page.evaluate(expression)
             return _clip(str(result), max_chars)
 
-        return f"Unknown action: {action}. Use goto, text, html, title, screenshot, click, type, wait, eval, or close."
+        if action == "cookies":
+            if not cookie_file:
+                return "No cookie_file provided for cookies. Pass a path to a JSON file of cookies."
+            import json as _json
+            if not os.path.isfile(cookie_file):
+                return _err(f"Cookie file not found: {cookie_file}")
+            try:
+                with open(cookie_file, "r", encoding="utf-8") as f:
+                    cookies = _json.load(f)
+            except Exception as e:
+                return _err(f"Failed to parse cookie file: {e}")
+            if not isinstance(cookies, list):
+                return _err("Cookie file must contain a JSON array of cookie objects.")
+            # Normalize: ensure required fields have defaults
+            for c in cookies:
+                c.setdefault("path", "/")
+                c.setdefault("expires", -1)
+                c.setdefault("httpOnly", False)
+                c.setdefault("secure", False)
+                c.setdefault("sameSite", "Lax")
+            _CONTEXT.add_cookies(cookies)
+            return f"Imported {len(cookies)} cookies from {cookie_file}."
+
+        if action == "cookies_export":
+            out = output or "cookies_export.json"
+            cookies = _CONTEXT.cookies()
+            import json as _json
+            with open(out, "w", encoding="utf-8") as f:
+                _json.dump(cookies, f, indent=2)
+            return f"Exported {len(cookies)} cookies to {os.path.abspath(out)}."
+
+        return f"Unknown action: {action}. Use goto, text, html, title, screenshot, click, type, wait, eval, cookies, cookies_export, or close."
 
     except Exception as e:
         return _err(f"{action} failed: {e}")
 
 
 def tool(action, url=None, selector=None, text=None, expression=None,
-         output=None, wait_ms=1500, timeout=10000, max_chars=8000):
+         output=None, wait_ms=1500, timeout=10000, max_chars=8000,
+         cookie_file=None):
     """Entry point called by the main app. Submits Playwright work to a
     dedicated thread so the sync API never collides with a running
     asyncio event loop in the main thread."""
@@ -200,7 +235,7 @@ def tool(action, url=None, selector=None, text=None, expression=None,
     try:
         future = _PW_EXECUTOR.submit(
             _pw_tool, action, url, selector, text, expression,
-            output, wait_ms, timeout, max_chars,
+            output, wait_ms, timeout, max_chars, cookie_file,
         )
         return future.result()
     except Exception as e:
