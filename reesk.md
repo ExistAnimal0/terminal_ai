@@ -42,7 +42,7 @@ terminal_ai/
 
 - MODEL - Ollama model to chat with (currently orcarouter/Qwen3.8-27B-Uncensored:q3_K_S)
 - SYSTEM_PROMPT - persona / behavior (this file is appended to it)
-- MAX_CTX - context window size (40000)
+- MAX_CTX - context window size (70000)
 - MAX_TOOL_ROUNDS - max tool-call iterations per turn (50)
 - THINKING_LEVEL - default thinking level ("basic")
 - THINKING_LEVELS - map of level -> {think param, prompt suffix}

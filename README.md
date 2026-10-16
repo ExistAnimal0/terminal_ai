@@ -46,7 +46,7 @@ All settings live at the top of terminal_ai.py:
 |---|---|---|
 | MODEL | orcarouter/Qwen3.8-27B-Uncensored:q3_K_S | Model to chat with |
 | SYSTEM_PROMPT | (see file) | Persona / behavior instructions |
-| MAX_CTX | 40000 | Context window size |
+| MAX_CTX | 70000 | Context window size |
 | MAX_TOOL_ROUNDS | 50 | Max tool-call iterations per turn |
 | THINKING_LEVEL | basic | Default thinking level |
 | THINKING_LEVELS | (see file) | Map of level -> {think param, prompt suffix} |

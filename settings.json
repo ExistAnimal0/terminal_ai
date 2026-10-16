@@ -1,4 +1,5 @@
 {
   "working_directory": "c:/terminal_ai",
-  "autocompact": 40000
+  "autocompact": 55000,
+  "temperature": 0.5
 }
