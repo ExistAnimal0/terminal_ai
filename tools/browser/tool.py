@@ -94,8 +94,14 @@ def _teardown():
 
 
 def _goto(page, url, wait_ms=1500):
-    if not re.match(r"^https?://", url):
-        url = "https://" + url
+    # Only add a scheme if the URL doesn't already have one
+    if "://" not in url:
+        # Looks like a local file path (drive letter, absolute, or relative)?
+        if re.match(r'^[A-Za-z]:[\\/]', url) or url.startswith('/') or url.startswith('.'):
+            import pathlib
+            url = pathlib.Path(url).resolve().as_uri()
+        else:
+            url = "https://" + url
     page.goto(url, timeout=30000, wait_until="domcontentloaded")
     if wait_ms > 0:
         page.wait_for_timeout(wait_ms)
