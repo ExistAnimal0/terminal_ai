@@ -1,0 +1,14 @@
+{
+  "name": "textkit",
+  "description": "Professional text toolkit: case conversion (camel/snake/kebab/pascal/constant/slug), whitespace cleaning, text statistics, hashing (md5/sha1/sha256/sha512), base64 encode/decode, URL encode/decode, slug generation, password generation, JSON pretty/minify, and line diff. Pass a command and its args as a single string, e.g. 'case --style snake --text HelloWorld'.",
+  "parameters": {
+    "type": "object",
+    "required": ["command"],
+    "properties": {
+      "command": {
+        "type": "string",
+        "description": "The textkit subcommand and its flags as one string. e.g. 'case --style snake --text HelloWorld', 'hash --algo sha256 --text hello', 'password --length 24 --symbols', 'stats --text some text', 'slug --text Hello World', 'base64 --mode encode --text hi', 'url --mode encode --text a b/c', 'json --mode pretty --text {\"a\":1}', 'diff --file-a x.txt --file-b y.txt', 'clean --text  a   b  '"
+      }
+    }
+  }
+}

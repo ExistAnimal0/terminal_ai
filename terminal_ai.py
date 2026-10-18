@@ -114,7 +114,7 @@ def log_turn_tokens(content_tokens, thinking_tokens, total_tokens):
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saves")
 SETTINGS_FILE = "settings.json"
 TOKEN_LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "token_log.json")
-MAX_TOOL_ROUNDS = 50
+MAX_TOOL_ROUNDS = 300
 MAX_CTX = 70000
 THINKING_LEVEL = "basic"
 THINKING_LEVELS = {

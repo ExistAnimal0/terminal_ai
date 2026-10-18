@@ -156,7 +156,7 @@ TOOLS = {
             {
                 "question": _s("The question/prompt to display above the menu."),
                 "options": _s("Comma-separated list of options, e.g. 'yes,no,maybe'."),
-                "allow_custom": _b("If true, add a 'custom' option so the user can type their own answer. Default true."),
+                "allow_custom": _b("If true, add a 'custom' option so the user can type their own, custom answer for you to see. Default false."),
             },
             ["question", "options"],
         ),
