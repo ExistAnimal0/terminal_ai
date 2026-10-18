@@ -18,6 +18,11 @@ import urllib.error
 import ollama
 from datetime import datetime
 
+# Work around a Windows OpenMP conflict: faster_whisper links both
+# ctranslate2 (libiomp5md) and av (libomp), which clash at load time.
+# Allow both so /voice and /stt do not crash. Harmless elsewhere.
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
 # Config
 MODEL = "orcarouter/Qwen3.8-27B-Uncensored:q3_K_S"
 SYSTEM_PROMPT = (
@@ -116,6 +121,7 @@ SETTINGS_FILE = "settings.json"
 TOKEN_LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "token_log.json")
 MAX_TOOL_ROUNDS = 300
 MAX_CTX = 70000
+STT_MODEL = "base"
 THINKING_LEVEL = "basic"
 THINKING_LEVELS = {
     "off":      {"think": False,     "prompt": ""},
@@ -578,6 +584,8 @@ COMMANDS = {
     "/think": "Set thinking level (off, low, basic, medium, xmedium, high, max).",
     "/autocompact": "Auto-compact threshold in tokens (0 to disable). e.g. /autocompact 30000.",
     "/temp": "Set sampling temperature (0.0-2.0). e.g. /temp 0.7. Saved to settings.json.",
+    "/voice": "Speak to the mic (FasterWhisper). Optional: /voice <seconds> to auto-stop, or /voice <model> to pick a model size.",
+    "/stt": "Transcribe an audio file to text. e.g. /stt notes/clip.mp3 [model].",
     "/exit": "Exit the assistant.",
     "/quit": "Exit the assistant.",
 }
@@ -637,6 +645,116 @@ def compact_thinking(messages, quiet=False):
         print()
     new_ctx = estimate_context_tokens(messages)
     return messages, old_ctx, new_ctx
+
+
+_STT_MODEL_CACHE = {}
+
+def get_stt_model(size=None):
+    """Load (and cache) a FasterWhisper model by size. First use downloads it
+    from HuggingFace and caches it on disk."""
+    size = size or STT_MODEL
+    if size not in _STT_MODEL_CACHE:
+        from faster_whisper import WhisperModel
+        _STT_MODEL_CACHE[size] = WhisperModel(size, device="auto", compute_type="auto")
+    return _STT_MODEL_CACHE[size]
+
+def transcribe_audio(audio, model=None, language=None):
+    """Transcribe audio to text. 'audio' is a file path (str) or a numpy
+    float32 mono array. Returns (text, language) on success, or (None, error)
+    on failure."""
+    try:
+        m = get_stt_model(model)
+        segments, info = m.transcribe(audio, language=language)
+        text = " ".join(s.text for s in segments).strip()
+        return text, (getattr(info, "language", "") or "")
+    except Exception as e:
+        return None, f"{type(e).__name__}: {e}"
+
+def record_audio(duration=None):
+    """Record mono 16kHz float32 audio from the default microphone.
+    duration: seconds to record; None = record until Enter is pressed.
+    Returns (audio, None) on success or (None, error) on failure."""
+    import numpy as np
+    import sounddevice as sd
+    sr = 16000
+    frames = []
+
+    def cb(indata, nframes, t, status):
+        frames.append(indata.copy())
+
+    try:
+        with sd.InputStream(samplerate=sr, channels=1, dtype="float32",
+                           callback=cb):
+            if duration is not None:
+                time.sleep(duration)
+            else:
+                input("  [recording - speak now, press Enter to stop] ")
+    except Exception as e:
+        return None, f"microphone error: {type(e).__name__}: {e}"
+    if not frames:
+        return None, "no audio captured (is a microphone connected?)"
+    audio = np.concatenate(frames, axis=0).flatten().astype("float32")
+    return audio, None
+
+def handle_voice(cmd):
+    """Handle /voice [seconds] and /stt <path> [model]. Returns the transcript
+    string to send as the user message, or None to just loop back to input."""
+    parts = cmd.split(None, 1)
+    name = parts[0].lower()
+    arg = parts[1].strip() if len(parts) > 1 else ""
+    bits = arg.split()
+    model = STT_MODEL
+
+    if name == "/voice":
+        duration = None
+        for b in bits:
+            try:
+                duration = float(b)
+                break
+            except ValueError:
+                model = b
+        if duration is not None and duration <= 0:
+            print(c(f"  [voice] duration must be positive, got {duration:g}", C.RED))
+            return None
+        print(c("  [voice] recording from microphone...", C.CYAN))
+        if duration is None:
+            print(c("  (speak now, press Enter when done)", C.DIM))
+        else:
+            print(c(f"  (recording {duration:g}s...)", C.DIM))
+        audio, err = record_audio(duration)
+        if audio is None:
+            print(c(f"  [voice] {err}", C.RED))
+            return None
+        text, err = transcribe_audio(audio, model)
+        if text is None:
+            print(c(f"  [voice] transcription error: {err}", C.RED))
+            return None
+        if not text:
+            print(c("  [voice] no speech detected.", C.YELLOW))
+            return None
+        print(c(f"  [voice] {text}", C.GREEN))
+        return text
+
+    # /stt
+    if not bits:
+        print(c("  [stt] usage: /stt <audio-file> [model]", C.YELLOW))
+        return None
+    path = bits[0]
+    if len(bits) > 1:
+        model = bits[1]
+    if not os.path.isfile(path):
+        print(c(f"  [stt] file not found: {path}", C.RED))
+        return None
+    print(c(f"  [stt] transcribing {path} (model: {model})...", C.CYAN))
+    text, err = transcribe_audio(path, model)
+    if text is None:
+        print(c(f"  [stt] error: {err}", C.RED))
+        return None
+    if not text:
+        print(c("  [stt] no speech detected.", C.YELLOW))
+        return None
+    print(c(f"  [stt] {text}", C.GREEN))
+    return text
 
 
 def handle_command(cmd, history, messages):
@@ -1032,16 +1150,24 @@ def main():
             continue
 
         if user_input.startswith("/"):
-            continue_flag, messages = handle_command(user_input, history, messages)
-            if not continue_flag:
-                break
-            if messages and messages[0]["role"] == "system":
-                history = [(messages[i]["content"], messages[i+1]["content"])
-                          for i in range(1, len(messages) - 1, 2)
-                          if messages[i]["role"] == "user"
-                          and i + 1 < len(messages)
-                          and messages[i+1]["role"] == "assistant"]
-            continue
+            cmd0 = user_input.split(None, 1)[0].lower()
+            if cmd0 in ("/voice", "/stt"):
+                transcript = handle_voice(user_input)
+                if transcript is None:
+                    continue
+                user_input = transcript
+                # Fall through to the normal chat round below.
+            else:
+                continue_flag, messages = handle_command(user_input, history, messages)
+                if not continue_flag:
+                    break
+                if messages and messages[0]["role"] == "system":
+                    history = [(messages[i]["content"], messages[i+1]["content"])
+                              for i in range(1, len(messages) - 1, 2)
+                              if messages[i]["role"] == "user"
+                              and i + 1 < len(messages)
+                              and messages[i+1]["role"] == "assistant"]
+                continue
 
         # Send to Ollama with streaming + tool loop
         pre_turn_count = len(messages)

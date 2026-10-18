@@ -13,6 +13,8 @@ streaming output and a pluggable tool system.
   - `playwright` + Chromium - required by the browser tool
   - `ffmpeg` - required by the analyze_video tool
   - `pyautogui` + `Pillow` - required by the computer_use tool
+  - `faster-whisper` + `sounddevice` - required by the stt tool and the
+    /voice, /stt commands (speech-to-text)
 
 ```bash
 ollama serve
@@ -20,6 +22,7 @@ ollama pull orcarouter/Qwen3.8-27B-Uncensored:q3_K_S
 pip install ddgs
 pip install playwright && playwright install chromium
 pip install pyautogui Pillow
+pip install faster-whisper sounddevice
 ```
 
 ## Running
@@ -118,6 +121,8 @@ Type / at the prompt to list all commands.
 | /files | Open the current working directory in the OS file explorer |
 | /think [level] | Set thinking level: off, low, basic, medium, xmedium, high, max |
 | /theme | Toggle colored output on/off |
+| /voice [seconds\|model] | Speak to the microphone; FasterWhisper transcribes it and the transcript is sent to the model. No arg = record until Enter; /voice 10 = auto-stop after 10s; /voice small = pick a model size. |
+| /stt <file> [model] | Transcribe an audio file (mp3, wav, m4a, flac, ogg) to text and send it to the model. |
 | /exit / /quit | Exit the app |
 
 Anything that does not start with / is sent to the model as a chat message.
@@ -206,6 +211,7 @@ Standalone folders (config.json + tool.py):
 | open_url | tools/open_url/ | Open a URL in the default browser |
 | regex | tools/regex/ | Match or replace text with a regex |
 | spotify | tools/spotify/ | Control Spotify playback (status, play, pause, next, previous, volume, search, play_id). OAuth config from .env; runtime tokens in spotify.json (gitignored). First login via spotify_login.py |
+| stt | tools/stt/ | Transcribe an audio file to text (FasterWhisper). Model loaded once per size and cached; first use downloads from HuggingFace. On Windows sets KMP_DUPLICATE_LIB_OK=TRUE to avoid a ctranslate2/av OpenMP clash. Also backs /voice and /stt. |
 | subagent | tools/subagent/ | Spawn and manage sub-agents (spawn, run, run_all, send, read, status, list, kill, clear) with a shared message bus |
 | memory | tools/memory/ | Persistent key-value memory with semantic search (nomic-embed-text via Ollama, cosine similarity, threshold 0.55; falls back to substring if Ollama is down) |
 

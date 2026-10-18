@@ -1,0 +1,22 @@
+{
+  "name": "stt",
+  "description": "Transcribe an audio file (mp3, wav, m4a, flac, ogg, etc.) to text using FasterWhisper. Returns the transcript. Use for voice notes, meeting recordings, or any audio file (e.g. in inbox/).",
+  "parameters": {
+    "type": "object",
+    "required": ["path"],
+    "properties": {
+      "path": {
+        "type": "string",
+        "description": "Path to the audio file to transcribe."
+      },
+      "model": {
+        "type": "string",
+        "description": "Whisper model size: tiny, base, small, medium, large-v3. Default: base."
+      },
+      "language": {
+        "type": "string",
+        "description": "Optional 2-letter language code (e.g. 'en'). Auto-detected if omitted."
+      }
+    }
+  }
+}

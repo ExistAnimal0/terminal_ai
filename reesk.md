@@ -37,13 +37,15 @@ terminal_ai/
   tools/               tool definitions (see Tool conventions below)
   tools/google_calendar/  Google Calendar tool (token.json gitignored)
   tools/computer_use/     GUI computer control (pyautogui + Pillow + vision)
+  tools/stt/            speech-to-text (FasterWhisper); also backs /voice and /stt
 
 ### Config (top of terminal_ai.py)
 
 - MODEL - Ollama model to chat with (currently orcarouter/Qwen3.8-27B-Uncensored:q3_K_S)
 - SYSTEM_PROMPT - persona / behavior (this file is appended to it)
 - MAX_CTX - context window size (70000)
-- MAX_TOOL_ROUNDS - max tool-call iterations per turn (50)
+- MAX_TOOL_ROUNDS - max tool-call iterations per turn (300)
+- STT_MODEL - default FasterWhisper model size for /voice and /stt ("base")
 - THINKING_LEVEL - default thinking level ("basic")
 - THINKING_LEVELS - map of level -> {think param, prompt suffix}
 - SAVE_DIR - where conversations are saved (anchored to the script dir)
@@ -82,7 +84,8 @@ Default is "basic" (think=medium, prompt "Don't think too hard.").
 / (list), /help, /clear, /history, /info, /model, /tools,
 /save [name], /load [name], /saves, /ctx, /compact, /autocompact [tokens],
 /temp [value],
-/rst, /frst, /cd [path], /files, /think [level], /theme, /exit, /quit
+/rst, /frst, /cd [path], /files, /think [level], /theme, /voice [seconds|model],
+/stt <file> [model], /exit, /quit
 
 - /save [name] - saves as conv_<name>.json (adds .json and conv_ prefix if missing)
 - /load [name] - loads a saved conversation (restores full context and replays it).
@@ -108,6 +111,12 @@ Default is "basic" (think=medium, prompt "Don't think too hard.").
 - /temp [value] - set sampling temperature (0.0-2.0, clamped). Persisted to
   settings.json["temperature"]; re-applied at startup. Default 0.1.
 - /theme - toggle colored output on/off
+- /voice [seconds|model] - speak to the microphone; FasterWhisper transcribes it
+  and the transcript is sent to the model as the user message. No argument =
+  record until Enter. /voice 10 = auto-stop after 10s. /voice small = pick a
+  model size (tiny, base, small, medium, large-v3).
+- /stt <file> [model] - transcribe an audio file (mp3, wav, m4a, flac, ogg) to
+  text and send it to the model. Optional model-size argument.
 
 ### Tool conventions
 
@@ -173,6 +182,11 @@ Standalone folders (config.json + tool.py):
                     previous, volume, search, play_id). OAuth config from .env;
                     runtime tokens in spotify.json (gitignored). First login via
                     spotify_login.py
+  stt/              transcribe an audio file to text (FasterWhisper). Model is
+                    loaded once per size and cached (module-level dict; first
+                    use downloads from HuggingFace). On Windows, sets
+                    KMP_DUPLICATE_LIB_OK=TRUE to avoid a ctranslate2/av OpenMP
+                    clash. Also backs the /voice and /stt commands.
   subagent/         spawn and manage sub-agents (spawn, run, run_all, send,
                     read, status, list, kill, clear) with a shared message bus
   memory/           persistent key-value memory with semantic search
