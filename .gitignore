@@ -4,6 +4,7 @@ __pycache__/
 .env
 spotify.json
 tools/gmail/client_secret.json
+tools/gmail/token.json
 tools/google_calendar/token.json
 memory.json
 token_log.json

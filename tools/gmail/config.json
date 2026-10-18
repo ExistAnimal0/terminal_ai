@@ -1,6 +1,6 @@
 {
   "name": "gmail",
-  "description": "Gmail operations: list, read, send, download attachments. User's email: existanimal0@gmail.com.",
+  "description": "Gmail operations: list, read, send, download attachments. User's email: existanimal0@gmail.com. This tool uses your email: reeskassistant@gmail.com",
   "parameters": {
     "type": "object",
     "required": ["action"],
